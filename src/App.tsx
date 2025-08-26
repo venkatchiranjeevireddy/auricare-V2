@@ -4,10 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
-import { RoleAuthProvider } from "@/hooks/useRoleAuth";
+import { RoleAuthProvider, useRoleAuth } from "@/hooks/useRoleAuth";
 import RoleBasedLayout from "./components/layout/RoleBasedLayout";
 import RoleBasedAuth from "./components/auth/RoleBasedAuth";
-import { useRoleAuth } from "@/hooks/useRoleAuth";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import News from "./pages/News";
@@ -35,6 +34,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// ----------- AppRoutes Component -------------
 function AppRoutes() {
   const { user, userRole, loading } = useRoleAuth();
 
@@ -56,18 +56,18 @@ function AppRoutes() {
         <Route path="/" element={<Index />} />
         <Route path="/about" element={<About />} />
         <Route path="/news" element={<News />} />
-        
+
         {/* User Routes */}
-        {userRole === 'user' && (
+        {userRole === "user" && (
           <>
             <Route path="/user/dashboard" element={<UserDashboard />} />
             <Route path="/user/appointments" element={<UserAppointments />} />
             <Route path="/user/chatbot" element={<UserChatbot />} />
           </>
         )}
-        
+
         {/* Patient Routes */}
-        {userRole === 'patient' && (
+        {userRole === "patient" && (
           <>
             <Route path="/patient/dashboard" element={<PatientDashboard />} />
             <Route path="/patient/progress" element={<PatientProgress />} />
@@ -75,9 +75,9 @@ function AppRoutes() {
             <Route path="/patient/chatbot" element={<PatientChatbot />} />
           </>
         )}
-        
+
         {/* Doctor Routes */}
-        {userRole === 'doctor' && (
+        {userRole === "doctor" && (
           <>
             <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
             <Route path="/doctor/appointments" element={<DoctorAppointments />} />
@@ -87,25 +87,26 @@ function AppRoutes() {
             <Route path="/doctor/chatbot" element={<DoctorChatbot />} />
           </>
         )}
-        
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </RoleBasedLayout>
   );
 }
 
+// ----------- Main App Component -------------
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
-      <RoleAuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
+      <BrowserRouter>
+        <RoleAuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
             <AppRoutes />
-          </BrowserRouter>
-        </TooltipProvider>
-      </RoleAuthProvider>
+          </TooltipProvider>
+        </RoleAuthProvider>
+      </BrowserRouter>
     </HelmetProvider>
   </QueryClientProvider>
 );
