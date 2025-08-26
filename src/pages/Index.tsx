@@ -26,7 +26,7 @@ const Index = () => {
             Track therapy progress, chat with Auri, schedule routines, and access calming sensory tools — all in one secure, accessible platform.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/contact"><Button variant="hero" size="xl">Create a free family profile</Button></Link>
+            <Link to="/auth"><Button variant="hero" size="xl">Create a free family profile</Button></Link>
             <Link to="/chatbot"><Button variant="glow" size="lg">Ask Auri</Button></Link>
           </div>
         </div>

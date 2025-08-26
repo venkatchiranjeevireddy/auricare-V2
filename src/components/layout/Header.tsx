@@ -1,7 +1,9 @@
 import { Link, NavLink } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, User, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { to: "/features", label: "Features" },
@@ -16,6 +18,7 @@ const navItems = [
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const { user, signOut } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -40,7 +43,27 @@ export default function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/contact"><Button variant="glow" size="sm">Get Started</Button></Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                  <User className="size-4" />
+                  {user.user_metadata?.first_name || user.email}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={signOut}>
+                  <LogOut className="size-4 mr-2" />
+                  Sign Out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/auth"><Button variant="glow" size="sm">Get Started</Button></Link>
+          )}
         </div>
 
         <button className="md:hidden p-2" aria-label="Toggle menu" onClick={() => setOpen(!open)}>
@@ -56,7 +79,13 @@ export default function Header() {
                 {item.label}
               </NavLink>
             ))}
-            <Link to="/contact" onClick={() => setOpen(false)} className="col-span-2"><Button className="w-full" variant="glow">Create profile</Button></Link>
+            <Link to="/contact" onClick={() => setOpen(false)} className="col-span-2">
+              {user ? (
+                <Button className="w-full" variant="ghost" onClick={signOut}>Sign Out</Button>
+              ) : (
+                <Button className="w-full" variant="glow">Get Started</Button>
+              )}
+            </Link>
           </nav>
         </div>
       )}
