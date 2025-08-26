@@ -14,16 +14,234 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      appointments: {
+        Row: {
+          appointment_date: string
+          created_at: string
+          duration_minutes: number | null
+          family_id: string
+          id: string
+          meeting_link: string | null
+          notes: string | null
+          status: string | null
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_date: string
+          created_at?: string
+          duration_minutes?: number | null
+          family_id: string
+          id?: string
+          meeting_link?: string | null
+          notes?: string | null
+          status?: string | null
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_date?: string
+          created_at?: string
+          duration_minutes?: number | null
+          family_id?: string
+          id?: string
+          meeting_link?: string | null
+          notes?: string | null
+          status?: string | null
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      daily_schedules: {
+        Row: {
+          child_name: string
+          created_at: string
+          family_id: string
+          id: string
+          is_active: boolean | null
+          schedule_name: string
+          tasks: Json
+          updated_at: string
+        }
+        Insert: {
+          child_name: string
+          created_at?: string
+          family_id: string
+          id?: string
+          is_active?: boolean | null
+          schedule_name: string
+          tasks?: Json
+          updated_at?: string
+        }
+        Update: {
+          child_name?: string
+          created_at?: string
+          family_id?: string
+          id?: string
+          is_active?: boolean | null
+          schedule_name?: string
+          tasks?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_schedules_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      therapy_sessions: {
+        Row: {
+          child_name: string
+          created_at: string
+          duration_minutes: number | null
+          family_id: string
+          goals: string[] | null
+          id: string
+          notes: string | null
+          progress_rating: number | null
+          session_date: string
+          therapist_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          child_name: string
+          created_at?: string
+          duration_minutes?: number | null
+          family_id: string
+          goals?: string[] | null
+          id?: string
+          notes?: string | null
+          progress_rating?: number | null
+          session_date: string
+          therapist_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          child_name?: string
+          created_at?: string
+          duration_minutes?: number | null
+          family_id?: string
+          goals?: string[] | null
+          id?: string
+          notes?: string | null
+          progress_rating?: number | null
+          session_date?: string
+          therapist_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "therapy_sessions_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "therapy_sessions_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { check_user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          check_role: Database["public"]["Enums"]["app_role"]
+          check_user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "family" | "therapist" | "admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +368,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["family", "therapist", "admin"],
+    },
   },
 } as const
