@@ -6,8 +6,18 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Clock, User, MapPin, Eye, Users } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment } from '@/types/roles';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+
+interface Appointment {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  username: string;
+  details: string;
+  appointment_date: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  created_at: string;
+}
 
 const DoctorAppointments = () => {
   const { user } = useRoleAuth();
@@ -23,11 +33,31 @@ const DoctorAppointments = () => {
     try {
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          id,
+          appointment_date,
+          status,
+          notes,
+          family_id,
+          therapist_id
+        `)
         .order('appointment_date', { ascending: true });
 
       if (error) throw error;
-      setAppointments(data || []);
+      
+      // Transform the data to match our interface
+      const transformedData = (data || []).map(apt => ({
+        id: apt.id,
+        patient_id: apt.family_id,
+        patient_name: 'Patient', // We'll need to fetch this from profiles
+        username: 'user', // We'll need to fetch this from profiles
+        details: apt.notes || 'No details provided',
+        appointment_date: apt.appointment_date,
+        status: 'confirmed' as const,
+        created_at: apt.appointment_date
+      }));
+      
+      setAppointments(transformedData);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -37,8 +67,6 @@ const DoctorAppointments = () => {
 
   const fetchPatientDetails = async (patientId: string) => {
     try {
-      // In a real implementation, you would fetch from a users table
-      // For now, we'll use the appointment data
       const appointment = appointments.find(apt => apt.patient_id === patientId);
       setSelectedPatient({
         id: patientId,
