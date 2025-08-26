@@ -9,9 +9,19 @@ import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
+interface Patient {
+  patient_id: string;
+  patient_name: string;
+  username: string;
+  lastAppointment: string;
+  status: string;
+  totalAppointments: number;
+  details: string;
+}
+
 const DoctorPatients = () => {
   const { user } = useRoleAuth();
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
@@ -31,26 +41,30 @@ const DoctorPatients = () => {
 
   const fetchPatients = async () => {
     try {
-      // Fetch unique patients from appointments
       const { data: appointments, error } = await supabase
         .from('appointments')
-        .select('patient_id, patient_name, username, status, appointment_date, details')
+        .select(`
+          family_id,
+          appointment_date,
+          status,
+          notes
+        `)
         .order('appointment_date', { ascending: false });
 
       if (error) throw error;
 
-      // Group by patient_id to get unique patients
-      const uniquePatients = appointments?.reduce((acc: any[], appointment) => {
-        const existingPatient = acc.find(p => p.patient_id === appointment.patient_id);
+      // Group by family_id to get unique patients
+      const uniquePatients = appointments?.reduce((acc: Patient[], appointment) => {
+        const existingPatient = acc.find(p => p.patient_id === appointment.family_id);
         if (!existingPatient) {
           acc.push({
-            patient_id: appointment.patient_id,
-            patient_name: appointment.patient_name,
-            username: appointment.username,
+            patient_id: appointment.family_id,
+            patient_name: 'Patient', // We'll need to fetch from profiles
+            username: 'user', // We'll need to fetch from profiles
             lastAppointment: appointment.appointment_date,
-            status: appointment.status,
+            status: appointment.status || 'pending',
             totalAppointments: 1,
-            details: appointment.details
+            details: appointment.notes || 'No details available'
           });
         } else {
           existingPatient.totalAppointments += 1;

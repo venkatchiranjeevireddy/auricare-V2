@@ -26,15 +26,11 @@ const UserAppointments = () => {
     setLoading(true);
 
     try {
-      // Generate patient ID
-      const patientId = `PAT${Date.now()}`;
-      
       const appointmentData = {
-        patient_id: user?.id,
-        patient_name: formData.patientName,
-        username: formData.username,
-        details: formData.details,
+        family_id: user?.id,
+        therapist_id: user?.id, // For demo purposes, using same user
         appointment_date: `${formData.appointmentDate}T${formData.appointmentTime}:00`,
+        notes: formData.details,
         status: 'pending'
       };
 

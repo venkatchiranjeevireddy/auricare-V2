@@ -23,11 +23,24 @@ const PatientAppointments = () => {
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
-        .eq('patient_id', user.id)
+        .eq('family_id', user.id)
         .order('appointment_date', { ascending: true });
 
       if (error) throw error;
-      setAppointments(data || []);
+      
+      // Transform data to match interface
+      const transformedData = (data || []).map(apt => ({
+        id: apt.id,
+        patient_id: apt.family_id,
+        patient_name: user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || 'Patient',
+        username: user?.user_metadata?.username || 'user',
+        details: apt.notes || 'No details provided',
+        appointment_date: apt.appointment_date,
+        status: apt.status || 'pending',
+        created_at: apt.created_at
+      }));
+      
+      setAppointments(transformedData);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {

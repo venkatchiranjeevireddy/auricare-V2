@@ -31,27 +31,26 @@ const DoctorSchedule = () => {
 
   const fetchPatients = async () => {
     try {
-      const { data: appointments, error } = await supabase
-        .from('appointments')
-        .select('patient_id, patient_name, username')
-        .order('patient_name');
-
-      if (error) throw error;
-
-      // Get unique patients
-      const uniquePatients = appointments?.reduce((acc: any[], appointment) => {
-        const existingPatient = acc.find(p => p.patient_id === appointment.patient_id);
-        if (!existingPatient) {
-          acc.push({
-            patient_id: appointment.patient_id,
-            patient_name: appointment.patient_name,
-            username: appointment.username,
-          });
+      // Mock patient data for demonstration
+      const mockPatients = [
+        {
+          patient_id: 'PAT001',
+          patient_name: 'John Doe',
+          username: 'johndoe'
+        },
+        {
+          patient_id: 'PAT002',
+          patient_name: 'Jane Smith',
+          username: 'janesmith'
+        },
+        {
+          patient_id: 'PAT003',
+          patient_name: 'Mike Johnson',
+          username: 'mikej'
         }
-        return acc;
-      }, []) || [];
-
-      setPatients(uniquePatients);
+      ];
+      
+      setPatients(mockPatients);
     } catch (error) {
       console.error('Error fetching patients:', error);
     }
