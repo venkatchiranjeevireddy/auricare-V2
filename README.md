@@ -1,6 +1,7 @@
 # AuriCare
 
 ## Project info
+# [Live](https://auricarev2.vercel.app/)
 
 ## How can I edit this code?
 
