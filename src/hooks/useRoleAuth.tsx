@@ -26,6 +26,20 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check for stored doctor session on mount
+    const storedDoctor = localStorage.getItem("doctor");
+    if (storedDoctor) {
+      try {
+        const doctorData = JSON.parse(storedDoctor);
+        setUser(doctorData);
+        setUserRole('doctor');
+        setLoading(false);
+        return;
+      } catch (error) {
+        localStorage.removeItem("doctor");
+      }
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -80,26 +94,53 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ Doctor Sign-in using `doctors` table
   const doctorSignIn = async (doctorId: string, password: string) => {
-    const { data, error } = await supabase
-      .from("doctors")
-      .select("*")
-      .eq("doctor_id", doctorId)
-      .eq("password", password) // ❗ hash this in production
-      .single();
+    // For demo purposes, use hardcoded doctor credentials
+    const validDoctors = {
+      'DOC001': 'doctor123',
+      'DOC002': 'doctor456', 
+      'DOC003': 'doctor789'
+    };
 
-    if (error || !data) {
+    if (!validDoctors[doctorId] || validDoctors[doctorId] !== password) {
       toast({ title: "Login Error", description: "Invalid doctor credentials", variant: "destructive" });
       return { error: "Invalid doctor credentials" };
     }
 
-    localStorage.setItem("doctor", JSON.stringify(data));
+    // Create a mock doctor user object
+    const doctorUser = {
+      id: doctorId,
+      email: `${doctorId.toLowerCase()}@hospital.com`,
+      user_metadata: {
+        role: 'doctor',
+        name: `Dr. ${doctorId}`,
+        doctor_id: doctorId
+      }
+    };
+
+    // Store doctor info and update auth state
+    localStorage.setItem("doctor", JSON.stringify(doctorUser));
+    setUser(doctorUser as any);
+    setUserRole('doctor');
+    
     navigate("/doctor/dashboard");
+    
+    toast({ title: "Welcome Doctor", description: `Successfully logged in as ${doctorUser.user_metadata.name}` });
+    
     return { error: null };
   };
 
   // ✅ Sign-out
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Check if it's a doctor session
+    const storedDoctor = localStorage.getItem("doctor");
+    if (storedDoctor) {
+      localStorage.removeItem("doctor");
+      setUser(null);
+      setUserRole(null);
+    } else {
+      await supabase.auth.signOut();
+    }
+    
     localStorage.removeItem("doctor");
     navigate("/auth");
     toast({ title: "Signed out", description: "You have been signed out successfully." });

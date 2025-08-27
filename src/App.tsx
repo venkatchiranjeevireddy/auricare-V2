@@ -77,7 +77,7 @@ function AppRoutes() {
         )}
 
         {/* Doctor Routes */}
-        {userRole === "doctor" && (
+        {(userRole === "doctor" || localStorage.getItem("doctor")) && (
           <>
             <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
             <Route path="/doctor/appointments" element={<DoctorAppointments />} />

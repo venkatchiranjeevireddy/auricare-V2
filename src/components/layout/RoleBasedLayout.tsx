@@ -11,9 +11,13 @@ interface RoleBasedLayoutProps {
 
 export default function RoleBasedLayout({ children }: RoleBasedLayoutProps) {
   const { userRole } = useRoleAuth();
+  
+  // Check for doctor session in localStorage
+  const storedDoctor = localStorage.getItem("doctor");
+  const effectiveRole = storedDoctor ? 'doctor' : userRole;
 
   const renderHeader = () => {
-    switch (userRole) {
+    switch (effectiveRole) {
       case 'user':
         return <UserHeader />;
       case 'patient':
