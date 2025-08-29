@@ -39,7 +39,10 @@ function AppRoutes() {
   const { user, userRole, loading } = useRoleAuth();
   const navigate = useNavigate();
 
-  // Use effect must be called on every render, before any returns
+  // Read localStorage once outside JSX for doctor flag
+  const isDoctorInStorage = typeof window !== 'undefined' && localStorage.getItem("doctor");
+
+  // useEffect must be at top level (no conditions)
   useEffect(() => {
     if (user && userRole) {
       const currentPath = window.location.pathname;
@@ -73,9 +76,6 @@ function AppRoutes() {
   if (!user) {
     return <RoleBasedAuth />;
   }
-
-  // Optional: read localStorage once (not required but cleaner)
-  const isDoctorInStorage = localStorage.getItem("doctor");
 
   return (
     <RoleBasedLayout>
