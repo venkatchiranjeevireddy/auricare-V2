@@ -3,7 +3,63 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { TrendingUp, Activity, Heart, Calendar } from 'lucide-react';
 
+import { useState, useEffect } from 'react';
+import { useRoleAuth } from '@/hooks/useRoleAuth';
+import { supabase } from '@/integrations/supabase/client';
+
 const PatientProgress = () => {
+  const { user } = useRoleAuth();
+  const [progressData, setProgressData] = useState<any[]>([]);
+  const [healthMetrics, setHealthMetrics] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProgressData();
+  }, [user]);
+
+  const fetchProgressData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch patient progress
+      const { data: patient } = await supabase
+        .from('patients')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (patient) {
+        const { data: progress, error: progressError } = await supabase
+          .from('patient_progress')
+          .select('*')
+          .eq('patient_id', patient.id)
+          .order('week_number', { ascending: true });
+
+        if (progressError) throw progressError;
+
+        const { data: metrics, error: metricsError } = await supabase
+          .from('health_metrics')
+          .select('*')
+          .eq('patient_id', patient.id)
+          .order('recorded_date', { ascending: true });
+
+        if (metricsError) throw metricsError;
+
+        setProgressData(progress || weeklyData);
+        setHealthMetrics(metrics || vitalSigns);
+      } else {
+        setProgressData(weeklyData);
+        setHealthMetrics(vitalSigns);
+      }
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+      setProgressData(weeklyData);
+      setHealthMetrics(vitalSigns);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Mock data for charts
   const weeklyData = [
     { week: 'Week 1', healthScore: 75, symptoms: 3 },
@@ -122,21 +178,21 @@ const PatientProgress = () => {
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={weeklyData}>
+                <LineChart data={progressData.length > 0 ? progressData : weeklyData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
                   <YAxis />
                   <Tooltip />
                   <Line 
                     type="monotone" 
-                    dataKey="healthScore" 
+                    dataKey="health_score" 
                     stroke="#16a34a" 
                     strokeWidth={3}
                     name="Health Score"
                   />
                   <Line 
                     type="monotone" 
-                    dataKey="symptoms" 
+                    dataKey="symptom_count" 
                     stroke="#dc2626" 
                     strokeWidth={3}
                     name="Symptom Count"
@@ -162,13 +218,12 @@ const PatientProgress = () => {
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={vitalSigns}>
+                <BarChart data={healthMetrics.length > 0 ? healthMetrics : vitalSigns}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
+                  <XAxis dataKey="recorded_date" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="heartRate" fill="#8b5cf6" name="Heart Rate (BPM)" />
-                  <Bar dataKey="bloodPressure" fill="#06b6d4" name="Blood Pressure (Systolic)" />
+                  <Bar dataKey="value" fill="#8b5cf6" name="Health Metric" />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -60,6 +60,7 @@ function AppRoutes() {
         {/* User Routes */}
         {userRole === "user" && (
           <>
+            <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/user/dashboard" element={<UserDashboard />} />
             <Route path="/user/appointments" element={<UserAppointments />} />
             <Route path="/user/chatbot" element={<UserChatbot />} />
@@ -69,6 +70,7 @@ function AppRoutes() {
         {/* Patient Routes */}
         {userRole === "patient" && (
           <>
+            <Route path="/dashboard" element={<PatientDashboard />} />
             <Route path="/patient/dashboard" element={<PatientDashboard />} />
             <Route path="/patient/progress" element={<PatientProgress />} />
             <Route path="/patient/appointments" element={<PatientAppointments />} />
@@ -79,6 +81,7 @@ function AppRoutes() {
         {/* Doctor Routes */}
         {(userRole === "doctor" || localStorage.getItem("doctor")) && (
           <>
+            <Route path="/dashboard" element={<DoctorDashboard />} />
             <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
             <Route path="/doctor/appointments" element={<DoctorAppointments />} />
             <Route path="/doctor/patients" element={<DoctorPatients />} />

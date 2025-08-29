@@ -171,11 +171,25 @@ const UserDashboard = () => {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <Activity className="size-12 mx-auto mb-4 opacity-50" />
-              <p>No recent activity</p>
-              <p className="text-sm mt-2">Your appointments and health updates will appear here</p>
-            </div>
+            {recentActivity.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="size-12 mx-auto mb-4 opacity-50" />
+                <p>No recent activity</p>
+                <p className="text-sm mt-2">Your appointments and health updates will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                    <Calendar className="size-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium">{activity.title}</p>
+                      <p className="text-sm text-gray-600">{activity.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

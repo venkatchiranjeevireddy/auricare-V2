@@ -21,20 +21,23 @@ const DoctorDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch appointment count
-      const { count: appointments } = await supabase
+      // Fetch appointment count from real data
+      const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
-        .select('*', { count: 'exact', head: true });
+        .select('*');
 
-      // Fetch unique patient count
-      const { data: patients } = await supabase
-        .from('appointments')
-        .select('patient_id');
+      if (appointmentsError) throw appointmentsError;
 
-      const uniquePatients = new Set(patients?.map(p => p.patient_id) || []);
+      // Fetch patient count from patients table
+      const { data: patients, error: patientsError } = await supabase
+        .from('patients')
+        .select('*');
 
-      setAppointmentCount(appointments || 0);
-      setPatientCount(uniquePatients.size);
+      if (patientsError) throw patientsError;
+
+      setAppointmentCount(appointments?.length || 0);
+      setPatientCount(patients?.length || 0);
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
