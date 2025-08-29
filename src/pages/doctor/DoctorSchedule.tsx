@@ -112,6 +112,20 @@ const DoctorSchedule = () => {
       // For demo purposes, add to local state
       setSchedules(prev => [newSchedule, ...prev]);
 
+      // Create notification for the patient
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert([{
+          user_id: formData.patientId,
+          title: 'New Schedule Assigned',
+          message: `Dr. ${user?.user_metadata?.name || 'Doctor'} has assigned you a new schedule: ${formData.title} on ${formData.scheduleDate} at ${formData.time}`,
+          type: 'schedule'
+        }]);
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+      }
+
       toast({
         title: 'Schedule Created!',
         description: `Schedule assigned to ${selectedPatient.patient_name} for ${formData.scheduleDate} at ${formData.time}`,

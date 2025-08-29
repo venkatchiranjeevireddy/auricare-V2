@@ -3,7 +3,41 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Calendar, User, TrendingUp } from 'lucide-react';
 
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { NewsArticleModal } from '@/components/ui/news-article-modal';
+
 const News = () => {
+  const [articles, setArticles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchNews();
+  }, []);
+
+  const fetchNews = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('news_articles')
+        .select('*')
+        .order('published_date', { ascending: false });
+
+      if (error) throw error;
+      setArticles(data || []);
+    } catch (error) {
+      console.error('Error fetching news:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleArticleClick = (article: any) => {
+    setSelectedArticle(article);
+    setModalOpen(true);
+  };
+
   const newsArticles = [
     {
       id: 1,
@@ -114,15 +148,18 @@ const News = () => {
         variants={containerVariants}
         className="grid gap-6 md:grid-cols-2"
       >
-        {newsArticles.map((article) => (
+        {(articles.length > 0 ? articles : newsArticles).map((article) => (
           <motion.div key={article.id} variants={itemVariants}>
-            <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 h-full">
+            <Card 
+              className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 h-full cursor-pointer"
+              onClick={() => handleArticleClick(article)}
+            >
               <CardHeader>
                 <div className="flex justify-between items-start mb-2">
                   <Badge className={getCategoryColor(article.category)}>
                     {article.category}
                   </Badge>
-                  <span className="text-xs text-gray-500">{article.readTime}</span>
+                  <span className="text-xs text-gray-500">{article.read_time || article.readTime}</span>
                 </div>
                 <CardTitle className="text-lg leading-tight">
                   {article.title}
@@ -139,14 +176,27 @@ const News = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="size-4" />
-                    <span>{new Date(article.date).toLocaleDateString()}</span>
+                    <span>{new Date(article.published_date || article.date).toLocaleDateString()}</span>
                   </div>
                 </div>
+                {article.content && (
+                  <div className="mt-4">
+                    <Button size="sm" variant="outline" className="w-full">
+                      Read Full Article
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
         ))}
       </motion.div>
+
+      <NewsArticleModal 
+        article={selectedArticle}
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+      />
 
       <motion.div variants={itemVariants}>
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">

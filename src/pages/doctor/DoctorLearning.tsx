@@ -11,37 +11,38 @@ import { toast } from '@/hooks/use-toast';
 
 const DoctorLearning = () => {
   const [videos, setVideos] = useState([
-    {
-      id: '1',
-      title: 'Patient Communication Techniques',
-      description: 'Learn effective communication strategies for better patient interactions',
-      category: 'Communication',
-      duration: '15:30',
-      thumbnail: 'https://images.pexels.com/photos/5452293/pexels-photo-5452293.jpeg?auto=compress&cs=tinysrgb&w=400',
-      uploadDate: '2024-01-15',
-      views: 45
-    },
-    {
-      id: '2',
-      title: 'Advanced Diagnostic Procedures',
-      description: 'Step-by-step guide to modern diagnostic techniques',
-      category: 'Medical Procedures',
-      duration: '22:45',
-      thumbnail: 'https://images.pexels.com/photos/4173251/pexels-photo-4173251.jpeg?auto=compress&cs=tinysrgb&w=400',
-      uploadDate: '2024-01-12',
-      views: 67
-    },
-    {
-      id: '3',
-      title: 'Emergency Response Protocols',
-      description: 'Critical procedures for handling medical emergencies',
-      category: 'Emergency Care',
-      duration: '18:20',
-      thumbnail: 'https://images.pexels.com/photos/263402/pexels-photo-263402.jpeg?auto=compress&cs=tinysrgb&w=400',
-      uploadDate: '2024-01-10',
-      views: 89
+    ]);
+
+  useEffect(() => {
+    fetchVideos();
+  }, []);
+
+  const fetchVideos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('learning_videos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const transformedVideos = (data || []).map(video => ({
+        id: video.id,
+        title: video.title,
+        description: video.description,
+        category: video.category,
+        duration: video.duration,
+        thumbnail_url: video.thumbnail_url,
+        uploadDate: video.created_at.split('T')[0],
+        views: video.views,
+        video_url: video.video_url
+      }));
+
+      setVideos(transformedVideos);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
     }
-  ]);
+  };
 
   const [formData, setFormData] = useState({
     title: '',
@@ -67,16 +68,32 @@ const DoctorLearning = () => {
     setLoading(true);
 
     try {
+      const { data, error } = await supabase
+        .from('learning_videos')
+        .insert([{
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          video_url: formData.videoUrl,
+          duration: formData.duration,
+          uploaded_by: user?.id,
+          thumbnail_url: 'https://images.pexels.com/photos/4173251/pexels-photo-4173251.jpeg?auto=compress&cs=tinysrgb&w=400'
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
       const newVideo = {
-        id: Date.now().toString(),
+        id: data.id,
         title: formData.title,
         description: formData.description,
         category: formData.category,
         duration: formData.duration,
-        thumbnail: 'https://images.pexels.com/photos/4173251/pexels-photo-4173251.jpeg?auto=compress&cs=tinysrgb&w=400',
-        uploadDate: new Date().toISOString().split('T')[0],
-        views: 0,
-        videoUrl: formData.videoUrl
+        thumbnail_url: data.thumbnail_url,
+        uploadDate: data.created_at.split('T')[0],
+        views: data.views,
+        video_url: data.video_url
       };
 
       setVideos(prev => [newVideo, ...prev]);
@@ -260,7 +277,14 @@ const DoctorLearning = () => {
                       />
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-300" />
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <PlayCircle className="size-12 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
+                        <a 
+                          href={video.video_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center"
+                        >
+                          <PlayCircle className="size-12 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
+                        </a>
                       </div>
                       <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
                         {video.duration}
@@ -288,9 +312,11 @@ const DoctorLearning = () => {
                       
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>Uploaded: {new Date(video.uploadDate).toLocaleDateString()}</span>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" asChild>
+                          <a href={video.video_url} target="_blank" rel="noopener noreferrer">
                           <Video className="size-3 mr-1" />
                           View
+                          </a>
                         </Button>
                       </div>
                     </div>

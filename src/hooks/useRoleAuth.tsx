@@ -87,46 +87,60 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const role = data.user?.user_metadata?.role;
-    navigate(role === "doctor" ? "/doctor/dashboard" : "/dashboard");
+    
+    // Navigate based on role
+    if (role === "doctor") {
+      navigate("/doctor/dashboard");
+    } else if (role === "patient") {
+      navigate("/patient/dashboard");
+    } else {
+      navigate("/user/dashboard");
+    }
 
     return { error: null };
   };
 
   // ✅ Doctor Sign-in using `doctors` table
   const doctorSignIn = async (doctorId: string, password: string) => {
-    // For demo purposes, use hardcoded doctor credentials
-    const validDoctors = {
-      'DOC001': 'doctor123',
-      'DOC002': 'doctor456', 
-      'DOC003': 'doctor789'
-    };
+    try {
+      const { data: doctor, error } = await supabase
+        .from('doctors')
+        .select('*')
+        .eq('doctor_id', doctorId)
+        .eq('password_hash', password)
+        .single();
 
-    if (!validDoctors[doctorId] || validDoctors[doctorId] !== password) {
-      toast({ title: "Login Error", description: "Invalid doctor credentials", variant: "destructive" });
-      return { error: "Invalid doctor credentials" };
-    }
-
-    // Create a mock doctor user object
-    const doctorUser = {
-      id: doctorId,
-      email: `${doctorId.toLowerCase()}@hospital.com`,
-      user_metadata: {
-        role: 'doctor',
-        name: `Dr. ${doctorId}`,
-        doctor_id: doctorId
+      if (error || !doctor) {
+        toast({ title: "Login Error", description: "Invalid doctor credentials", variant: "destructive" });
+        return { error: "Invalid doctor credentials" };
       }
-    };
 
-    // Store doctor info and update auth state
-    localStorage.setItem("doctor", JSON.stringify(doctorUser));
-    setUser(doctorUser as any);
-    setUserRole('doctor');
-    
-    navigate("/doctor/dashboard");
-    
-    toast({ title: "Welcome Doctor", description: `Successfully logged in as ${doctorUser.user_metadata.name}` });
-    
-    return { error: null };
+      // Create a mock doctor user object
+      const doctorUser = {
+        id: doctor.id,
+        email: doctor.email,
+        user_metadata: {
+          role: 'doctor',
+          name: doctor.name,
+          doctor_id: doctor.doctor_id,
+          specialization: doctor.specialization
+        }
+      };
+
+      // Store doctor info and update auth state
+      localStorage.setItem("doctor", JSON.stringify(doctorUser));
+      setUser(doctorUser as any);
+      setUserRole('doctor');
+      
+      navigate("/doctor/dashboard");
+      
+      toast({ title: "Welcome Doctor", description: `Successfully logged in as ${doctor.name}` });
+      
+      return { error: null };
+    } catch (error) {
+      toast({ title: "Login Error", description: "Database connection error", variant: "destructive" });
+      return { error: "Database error" };
+    }
   };
 
   // ✅ Sign-out
