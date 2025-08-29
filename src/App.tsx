@@ -2,8 +2,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { useEffect } from "react";
 import { RoleAuthProvider, useRoleAuth } from "@/hooks/useRoleAuth";
 import RoleBasedLayout from "./components/layout/RoleBasedLayout";
 import RoleBasedAuth from "./components/auth/RoleBasedAuth";
@@ -37,6 +38,7 @@ const queryClient = new QueryClient();
 // ----------- AppRoutes Component -------------
 function AppRoutes() {
   const { user, userRole, loading } = useRoleAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -49,6 +51,30 @@ function AppRoutes() {
   if (!user) {
     return <RoleBasedAuth />;
   }
+
+  // Handle navigation after successful authentication
+  useEffect(() => {
+    if (user && userRole) {
+      const currentPath = window.location.pathname;
+      
+      // Only redirect if user is on auth page or root
+      if (currentPath === '/' || currentPath === '/auth') {
+        switch (userRole) {
+          case 'doctor':
+            navigate('/doctor/dashboard');
+            break;
+          case 'patient':
+            navigate('/patient/dashboard');
+            break;
+          case 'user':
+            navigate('/user/dashboard');
+            break;
+          default:
+            navigate('/user/dashboard');
+        }
+      }
+    }
+  }, [user, userRole, navigate]);
 
   return (
     <RoleBasedLayout>

@@ -88,14 +88,8 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
 
     const role = data.user?.user_metadata?.role;
     
-    // Navigate based on role
-    if (role === "doctor") {
-      navigate("/doctor/dashboard");
-    } else if (role === "patient") {
-      navigate("/patient/dashboard");
-    } else {
-      navigate("/user/dashboard");
-    }
+    // Navigation will be handled by the auth state change
+    toast({ title: "Welcome back!", description: "Successfully signed in" });
 
     return { error: null };
   };

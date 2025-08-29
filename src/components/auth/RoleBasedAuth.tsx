@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus, LogIn, Stethoscope, User, Heart } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { UserRole } from '@/types/roles';
+import { useNavigate } from 'react-router-dom';
 
 const RoleBasedAuth = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -26,11 +28,28 @@ const RoleBasedAuth = () => {
     e.preventDefault();
     setLoading(true);
     
-    await signUp(email, password, role, {
+    const result = await signUp(email, password, role, {
       username,
       first_name: firstName,
       last_name: lastName,
     });
+    
+    if (!result.error) {
+      // Navigate based on role after successful signup
+      switch (role) {
+        case 'doctor':
+          navigate('/doctor/dashboard');
+          break;
+        case 'patient':
+          navigate('/patient/dashboard');
+          break;
+        case 'user':
+          navigate('/user/dashboard');
+          break;
+        default:
+          navigate('/user/dashboard');
+      }
+    }
     
     setLoading(false);
   };
@@ -39,7 +58,30 @@ const RoleBasedAuth = () => {
     e.preventDefault();
     setLoading(true);
     
-    await signIn(email, password);
+    const result = await signIn(email, password);
+    
+    if (!result.error) {
+      // The navigation will be handled by the auth state change in App.tsx
+      // But we can also handle it here as a fallback
+      setTimeout(() => {
+        const currentUser = JSON.parse(localStorage.getItem('sb-fxkziqywoiusggfpxhpi-auth-token') || '{}');
+        const userRole = currentUser?.user?.user_metadata?.role;
+        
+        switch (userRole) {
+          case 'doctor':
+            navigate('/doctor/dashboard');
+            break;
+          case 'patient':
+            navigate('/patient/dashboard');
+            break;
+          case 'user':
+            navigate('/user/dashboard');
+            break;
+          default:
+            navigate('/user/dashboard');
+        }
+      }, 100);
+    }
     
     setLoading(false);
   };
@@ -48,7 +90,11 @@ const RoleBasedAuth = () => {
     e.preventDefault();
     setLoading(true);
     
-    await doctorSignIn(doctorId, password);
+    const result = await doctorSignIn(doctorId, password);
+    
+    if (!result.error) {
+      navigate('/doctor/dashboard');
+    }
     
     setLoading(false);
   };
