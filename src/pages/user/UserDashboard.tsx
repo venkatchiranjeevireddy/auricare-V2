@@ -203,18 +203,13 @@ const UserDashboard = () => {
               <div className="text-center py-8 text-gray-500">
                 <Activity className="size-12 mx-auto mb-4 opacity-50" />
                 <p>No recent activity</p>
-<<<<<<< HEAD
                 <p className="text-sm mt-2">
                   Your appointments and health updates will appear here
                 </p>
-=======
-                <p className="text-sm mt-2">Your appointments and health updates will appear here</p>
->>>>>>> e0c8ab8bdd9c24f022847a8a3147ab01e7386102
               </div>
             ) : (
               <div className="space-y-3">
                 {recentActivity.map((activity) => (
-<<<<<<< HEAD
                   <div
                     key={activity.id}
                     className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"
@@ -225,13 +220,6 @@ const UserDashboard = () => {
                       <p className="text-sm text-gray-600">
                         {activity.description}
                       </p>
-=======
-                  <div key={activity.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                    <Calendar className="size-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">{activity.title}</p>
-                      <p className="text-sm text-gray-600">{activity.description}</p>
->>>>>>> e0c8ab8bdd9c24f022847a8a3147ab01e7386102
                     </div>
                   </div>
                 ))}

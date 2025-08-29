@@ -38,28 +38,16 @@ const UserAppointments = () => {
     if (!user) return;
 
     try {
-<<<<<<< HEAD
       const {data, error} = await supabase
         .from("appointments")
         .select("*")
         .eq("family_id", user.id)
         .order("appointment_date", {ascending: true});
-=======
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('family_id', user.id)
-        .order('appointment_date', { ascending: true });
->>>>>>> e0c8ab8bdd9c24f022847a8a3147ab01e7386102
 
       if (error) throw error;
       setAppointments(data || []);
     } catch (error) {
-<<<<<<< HEAD
       console.error("Error fetching appointments:", error);
-=======
-      console.error('Error fetching appointments:', error);
->>>>>>> e0c8ab8bdd9c24f022847a8a3147ab01e7386102
     }
   };
 
@@ -233,18 +221,13 @@ const UserAppointments = () => {
             <div className="text-center py-8 text-gray-500">
               <Clock className="size-12 mx-auto mb-4 opacity-50" />
               <p>No appointments scheduled</p>
-<<<<<<< HEAD
               <p className="text-sm mt-2">
                 Your booked appointments will appear here
               </p>
-=======
-              <p className="text-sm mt-2">Your booked appointments will appear here</p>
->>>>>>> e0c8ab8bdd9c24f022847a8a3147ab01e7386102
             </div>
           ) : (
             <div className="space-y-4">
               {appointments.map((appointment) => (
-<<<<<<< HEAD
                 <div
                   key={appointment.id}
                   className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border"
@@ -278,28 +261,6 @@ const UserAppointments = () => {
                       {new Date(
                         appointment.appointment_date
                       ).toLocaleTimeString()}
-=======
-                <div key={appointment.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold">Healthcare Appointment</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {appointment.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-3">{appointment.notes}</p>
-                  <div className="flex items-center gap-4 text-xs text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="size-3" />
-                      {new Date(appointment.appointment_date).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="size-3" />
-                      {new Date(appointment.appointment_date).toLocaleTimeString()}
->>>>>>> e0c8ab8bdd9c24f022847a8a3147ab01e7386102
                     </div>
                   </div>
                 </div>
