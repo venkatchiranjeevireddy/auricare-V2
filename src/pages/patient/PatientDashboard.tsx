@@ -6,8 +6,12 @@ import { Link } from 'react-router-dom';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { GlassmorphismCard } from '@/components/ui/glassmorphism-card';
 
+import { usePatientNotifications } from '@/hooks/usePatientNotifications';
+import { Bell } from 'lucide-react';
+
 const PatientDashboard = () => {
   const { user } = useRoleAuth();
+  const { notifications, unreadCount } = usePatientNotifications();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -55,6 +59,14 @@ const PatientDashboard = () => {
               <h2 className="text-xl font-semibold">Health Overview</h2>
               <p className="text-gray-600">Your current health status and recent reports</p>
             </div>
+            {unreadCount > 0 && (
+              <div className="ml-auto flex items-center gap-2">
+                <Bell className="size-5 text-orange-600" />
+                <Badge className="bg-orange-100 text-orange-800">
+                  {unreadCount} New
+                </Badge>
+              </div>
+            )}
           </div>
         </GlassmorphismCard>
       </motion.div>
@@ -168,14 +180,43 @@ const PatientDashboard = () => {
       <motion.div variants={itemVariants}>
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
-            <CardTitle>Recent Reports</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Recent Reports & Notifications
+              {unreadCount > 0 && (
+                <Badge className="bg-orange-100 text-orange-800">
+                  {unreadCount}
+                </Badge>
+              )}
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <FileText className="size-12 mx-auto mb-4 opacity-50" />
-              <p>No recent reports</p>
-              <p className="text-sm mt-2">Your health reports and progress updates will appear here</p>
-            </div>
+            {notifications.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <FileText className="size-12 mx-auto mb-4 opacity-50" />
+                <p>No recent reports</p>
+                <p className="text-sm mt-2">Your health reports and progress updates will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {notifications.slice(0, 5).map((notification) => (
+                  <div key={notification.id} className={`p-3 rounded-lg border-l-4 ${
+                    notification.type === 'appointment' ? 'bg-blue-50 border-blue-500' :
+                    notification.type === 'schedule' ? 'bg-green-50 border-green-500' :
+                    'bg-gray-50 border-gray-500'
+                  } ${!notification.read ? 'bg-opacity-100' : 'bg-opacity-50'}`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-semibold">{notification.title}</h4>
+                        <p className="text-sm text-gray-600">{notification.message}</p>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {new Date(notification.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

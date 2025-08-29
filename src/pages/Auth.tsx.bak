@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useRoleAuth } from '@/hooks/useRoleAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,48 +15,38 @@ const Auth = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<'signin' | 'signup'>('signin');
   
-  const { signUp, signIn, user } = useRoleAuth();
+  const { signUp, signIn, user } = useAuth();
   const navigate = useNavigate();
 
   const canonical = typeof window !== 'undefined' ? window.location.origin + window.location.pathname : '';
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    try {
-      const res = await signUp(email, password, 'patient', {
-        first_name: firstName,
-        last_name: lastName,
-      });
-
-      setLoading(false);
-
-      if (!res || !res.error) {
-        // Switch to Sign In tab so user can sign in after verifying email
-        setTab('signin');
-      }
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-    }
+    
+    await signUp(email, password, {
+      first_name: firstName,
+      last_name: lastName,
+    });
+    
+    setLoading(false);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    try {
-      const res = await signIn(email, password);
-      setLoading(false);
-      // navigation is handled inside useRoleAuth.signIn based on role
-      return res;
-    } catch (err) {
-      console.error(err);
-      setLoading(false);
-    }
+    
+    await signIn(email, password);
+    
+    setLoading(false);
   };
 
   return (
@@ -74,7 +64,7 @@ const Auth = () => {
           <p className="text-muted-foreground">Secure access for families and therapists</p>
         </div>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v)} className="space-y-6">
+        <Tabs defaultValue="signin" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>

@@ -1,34 +1,52 @@
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { CalendarCheck2, MessageSquare, User, Heart, Plus, Activity } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { useRoleAuth } from '@/hooks/useRoleAuth';
-import { GlassmorphismCard } from '@/components/ui/glassmorphism-card';
+import {motion} from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {Button} from "@/components/ui/button";
+import {
+  CalendarCheck2,
+  MessageSquare,
+  User,
+  Heart,
+  Plus,
+  Activity,
+  Calendar,
+} from "lucide-react";
+import {Link} from "react-router-dom";
+import {useRoleAuth} from "@/hooks/useRoleAuth";
+import {GlassmorphismCard} from "@/components/ui/glassmorphism-card";
+import {useState} from "react";
 
 const UserDashboard = () => {
-  const { user } = useRoleAuth();
+  const {user} = useRoleAuth();
+
+  // ✅ Fix: Initialize recentActivity to an empty array or sample data
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   const containerVariants = {
-    hidden: { opacity: 0 },
+    hidden: {opacity: 0},
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1
-      }
-    }
+        staggerChildren: 0.1,
+      },
+    },
   };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: {y: 20, opacity: 0},
     visible: {
       y: 0,
       opacity: 1,
       transition: {
         type: "spring",
-        stiffness: 100
-      }
-    }
+        stiffness: 100,
+      },
+    },
   };
 
   return (
@@ -40,9 +58,11 @@ const UserDashboard = () => {
     >
       <motion.div variants={itemVariants} className="text-center">
         <h1 className="text-4xl font-heading font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Welcome back, {user?.user_metadata?.first_name || 'User'}!
+          Welcome back, {user?.user_metadata?.first_name || "User"}!
         </h1>
-        <p className="text-gray-600 mt-2">Manage your health and appointments</p>
+        <p className="text-gray-600 mt-2">
+          Manage your health and appointments
+        </p>
       </motion.div>
 
       <motion.div variants={itemVariants}>
@@ -53,7 +73,9 @@ const UserDashboard = () => {
             </div>
             <div>
               <h2 className="text-xl font-semibold">Health Summary</h2>
-              <p className="text-gray-600">Your health profile and recent activity</p>
+              <p className="text-gray-600">
+                Your health profile and recent activity
+              </p>
             </div>
           </div>
         </GlassmorphismCard>
@@ -97,7 +119,10 @@ const UserDashboard = () => {
             </CardHeader>
             <CardContent>
               <Link to="/user/appointments">
-                <Button variant="outline" className="w-full border-green-200 hover:bg-green-50">
+                <Button
+                  variant="outline"
+                  className="w-full border-green-200 hover:bg-green-50"
+                >
                   View Appointments
                 </Button>
               </Link>
@@ -138,7 +163,10 @@ const UserDashboard = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full border-orange-200 hover:bg-orange-50">
+              <Button
+                variant="outline"
+                className="w-full border-orange-200 hover:bg-orange-50"
+              >
                 View Insights
               </Button>
             </CardContent>
@@ -171,11 +199,32 @@ const UserDashboard = () => {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-8 text-gray-500">
-              <Activity className="size-12 mx-auto mb-4 opacity-50" />
-              <p>No recent activity</p>
-              <p className="text-sm mt-2">Your appointments and health updates will appear here</p>
-            </div>
+            {recentActivity.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Activity className="size-12 mx-auto mb-4 opacity-50" />
+                <p>No recent activity</p>
+                <p className="text-sm mt-2">
+                  Your appointments and health updates will appear here
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentActivity.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg"
+                  >
+                    <Calendar className="size-5 text-blue-600" />
+                    <div>
+                      <p className="font-medium">{activity.title}</p>
+                      <p className="text-sm text-gray-600">
+                        {activity.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>

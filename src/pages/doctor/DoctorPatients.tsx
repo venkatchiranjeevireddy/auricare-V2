@@ -37,7 +37,36 @@ const DoctorPatients = () => {
 
   useEffect(() => {
     fetchPatients();
+    fetchRealPatients();
   }, []);
+
+  const fetchRealPatients = async () => {
+    try {
+      const { data: patientsData, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (patientsData && patientsData.length > 0) {
+        const transformedPatients = patientsData.map(patient => ({
+          patient_id: patient.id,
+          patient_name: patient.patient_name,
+          username: patient.username,
+          lastAppointment: new Date().toISOString(),
+          status: 'confirmed',
+          totalAppointments: 1,
+          details: patient.medical_history || 'No medical history available'
+        }));
+        setPatients(transformedPatients);
+        setLoading(false);
+        return;
+      }
+    } catch (error) {
+      console.error('Error fetching real patients:', error);
+    }
+  };
 
   const fetchPatients = async () => {
     try {
