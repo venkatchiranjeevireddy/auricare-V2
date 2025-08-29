@@ -35,10 +35,32 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// ----------- AppRoutes Component -------------
 function AppRoutes() {
   const { user, userRole, loading } = useRoleAuth();
   const navigate = useNavigate();
+
+  // Use effect must be called on every render, before any returns
+  useEffect(() => {
+    if (user && userRole) {
+      const currentPath = window.location.pathname;
+
+      if (currentPath === "/" || currentPath === "/auth") {
+        switch (userRole) {
+          case "doctor":
+            navigate("/doctor/dashboard");
+            break;
+          case "patient":
+            navigate("/patient/dashboard");
+            break;
+          case "user":
+            navigate("/user/dashboard");
+            break;
+          default:
+            navigate("/user/dashboard");
+        }
+      }
+    }
+  }, [user, userRole, navigate]);
 
   if (loading) {
     return (
@@ -52,29 +74,8 @@ function AppRoutes() {
     return <RoleBasedAuth />;
   }
 
-  // Handle navigation after successful authentication
-  useEffect(() => {
-    if (user && userRole) {
-      const currentPath = window.location.pathname;
-      
-      // Only redirect if user is on auth page or root
-      if (currentPath === '/' || currentPath === '/auth') {
-        switch (userRole) {
-          case 'doctor':
-            navigate('/doctor/dashboard');
-            break;
-          case 'patient':
-            navigate('/patient/dashboard');
-            break;
-          case 'user':
-            navigate('/user/dashboard');
-            break;
-          default:
-            navigate('/user/dashboard');
-        }
-      }
-    }
-  }, [user, userRole, navigate]);
+  // Optional: read localStorage once (not required but cleaner)
+  const isDoctorInStorage = localStorage.getItem("doctor");
 
   return (
     <RoleBasedLayout>
@@ -105,7 +106,7 @@ function AppRoutes() {
         )}
 
         {/* Doctor Routes */}
-        {(userRole === "doctor" || localStorage.getItem("doctor")) && (
+        {(userRole === "doctor" || isDoctorInStorage) && (
           <>
             <Route path="/dashboard" element={<DoctorDashboard />} />
             <Route path="/doctor/dashboard" element={<DoctorDashboard />} />
@@ -123,7 +124,6 @@ function AppRoutes() {
   );
 }
 
-// ----------- Main App Component -------------
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
