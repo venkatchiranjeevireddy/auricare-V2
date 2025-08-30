@@ -103,14 +103,16 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
   // ✅ Doctor Sign-in using `doctors` table
   const doctorSignIn = async (doctorId: string, password: string) => {
     try {
-      const { data: doctor, error } = await supabase
-        .from('doctors')
-        .select('*')
-        .eq('doctor_id', doctorId)
-        .eq('password_hash', password)
-        .single();
+      // Temporary: Use hardcoded doctor credentials until migration is applied
+      const validDoctors = [
+        { id: 'doc1', doctor_id: 'DOC001', name: 'Dr. Sarah Johnson', email: 'sarah.johnson@hospital.com', specialization: 'Cardiology', password: 'doctor123' },
+        { id: 'doc2', doctor_id: 'DOC002', name: 'Dr. Michael Chen', email: 'michael.chen@hospital.com', specialization: 'Neurology', password: 'doctor456' },
+        { id: 'doc3', doctor_id: 'DOC003', name: 'Dr. Emily Rodriguez', email: 'emily.rodriguez@hospital.com', specialization: 'Pediatrics', password: 'doctor789' }
+      ];
 
-      if (error || !doctor) {
+      const doctor = validDoctors.find(d => d.doctor_id === doctorId && d.password === password);
+
+      if (!doctor) {
         toast({ title: "Login Error", description: "Invalid doctor credentials", variant: "destructive" });
         return { error: "Invalid doctor credentials" };
       }
@@ -138,8 +140,8 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       
       return { error: null };
     } catch (error) {
-      toast({ title: "Login Error", description: "Database connection error", variant: "destructive" });
-      return { error: "Database error" };
+      toast({ title: "Login Error", description: "Authentication error", variant: "destructive" });
+      return { error: "Authentication error" };
     }
   };
 
