@@ -2,10 +2,22 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, User, MapPin } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Stethoscope } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment } from '@/types/roles';
+
+interface Appointment {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  username: string;
+  details: string;
+  appointment_date: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'scheduled';
+  created_at: string;
+  doctor_name?: string;
+  specialization?: string;
+}
 
 const PatientAppointments = () => {
   const { user } = useRoleAuth();
@@ -22,23 +34,41 @@ const PatientAppointments = () => {
     try {
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          doctors!appointments_therapist_id_fkey(name, specialization)
+        `)
         .eq('family_id', user.id)
         .order('appointment_date', { ascending: true });
 
       if (error) throw error;
       
       // Transform data to match interface
-      const transformedData = (data || []).map(apt => ({
-        id: apt.id,
-        patient_id: apt.family_id,
-        patient_name: user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || 'Patient',
-        username: user?.user_metadata?.username || 'user',
-        details: apt.notes || 'No details provided',
-        appointment_date: apt.appointment_date,
-        status: apt.status || 'pending',
-        created_at: apt.created_at
-      }));
+      const transformedData = (data || []).map(apt => {
+        const notes = apt.notes || '';
+        const patientName = notes.includes('Patient: ') 
+          ? notes.split('Patient: ')[1]?.split('\n')[0] || user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name
+          : user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || 'Patient';
+        const username = notes.includes('Username: ')
+          ? notes.split('Username: ')[1]?.split('\n')[0] || user?.user_metadata?.username
+          : user?.user_metadata?.username || 'user';
+        const details = notes.includes('Details: ')
+          ? notes.split('Details: ')[1]?.split('\n')[0] || 'No details provided'
+          : notes || 'No details provided';
+
+        return {
+          id: apt.id,
+          patient_id: apt.family_id,
+          patient_name: patientName,
+          username: username,
+          details: details,
+          appointment_date: apt.appointment_date,
+          status: apt.status || 'scheduled',
+          created_at: apt.created_at,
+          doctor_name: apt.doctors?.name,
+          specialization: apt.doctors?.specialization
+        };
+      });
       
       setAppointments(transformedData);
     } catch (error) {
@@ -51,6 +81,7 @@ const PatientAppointments = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
+      case 'scheduled':
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
@@ -144,11 +175,14 @@ const PatientAppointments = () => {
                   <div className="flex justify-between items-start">
                     <div>
                       <CardTitle className="flex items-center gap-2">
-                        <User className="size-5 text-blue-600" />
-                        Appointment with Healthcare Provider
+                        <Stethoscope className="size-5 text-blue-600" />
+                        {appointment.doctor_name ? `Appointment with ${appointment.doctor_name}` : 'Healthcare Appointment'}
                       </CardTitle>
                       <CardDescription className="mt-1">
                         Patient: {appointment.patient_name}
+                        {appointment.specialization && (
+                          <span className="block">Specialization: {appointment.specialization}</span>
+                        )}
                       </CardDescription>
                     </div>
                     <Badge className={getStatusColor(appointment.status)}>

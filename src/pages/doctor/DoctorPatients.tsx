@@ -17,6 +17,7 @@ interface Patient {
   status: string;
   totalAppointments: number;
   details: string;
+  user_id: string;
 }
 
 const DoctorPatients = () => {
@@ -37,71 +38,76 @@ const DoctorPatients = () => {
 
   useEffect(() => {
     fetchPatients();
-    fetchRealPatients();
   }, []);
 
-  const fetchRealPatients = async () => {
+  const fetchPatients = async () => {
     try {
-      const { data: patientsData, error } = await supabase
+      // Fetch patients from the patients table
+      const { data: patientsData, error: patientsError } = await supabase
         .from('patients')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (patientsError) throw patientsError;
 
       if (patientsData && patientsData.length > 0) {
-        const transformedPatients = patientsData.map(patient => ({
-          patient_id: patient.id,
-          patient_name: patient.patient_name,
-          username: patient.username,
-          lastAppointment: new Date().toISOString(),
-          status: 'confirmed',
-          totalAppointments: 1,
-          details: patient.medical_history || 'No medical history available'
-        }));
-        setPatients(transformedPatients);
-        setLoading(false);
-        return;
+        // For each patient, get their appointment count
+        const patientsWithAppointments = await Promise.all(
+          patientsData.map(async (patient) => {
+            const { data: appointments, error: aptError } = await supabase
+              .from('appointments')
+              .select('*')
+              .eq('family_id', patient.user_id);
+
+            if (aptError) {
+              console.error('Error fetching appointments for patient:', aptError);
+            }
+
+            const appointmentCount = appointments?.length || 0;
+            const lastAppointment = appointments && appointments.length > 0 
+              ? appointments.sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime())[0].appointment_date
+              : new Date().toISOString();
+
+            return {
+              patient_id: patient.id,
+              patient_name: patient.patient_name,
+              username: patient.username,
+              lastAppointment: lastAppointment,
+              status: 'active',
+              totalAppointments: appointmentCount,
+              details: patient.medical_history || 'No medical history available',
+              user_id: patient.user_id
+            };
+          })
+        );
+
+        setPatients(patientsWithAppointments);
+      } else {
+        // Fallback to mock data
+        const mockPatients: Patient[] = [
+          {
+            patient_id: 'PAT001',
+            patient_name: 'John Doe',
+            username: 'johndoe',
+            lastAppointment: new Date().toISOString(),
+            status: 'active',
+            totalAppointments: 3,
+            details: 'Regular checkups and monitoring',
+            user_id: 'user1'
+          },
+          {
+            patient_id: 'PAT002',
+            patient_name: 'Jane Smith',
+            username: 'janesmith',
+            lastAppointment: new Date().toISOString(),
+            status: 'active',
+            totalAppointments: 2,
+            details: 'Chronic condition management',
+            user_id: 'user2'
+          }
+        ];
+        setPatients(mockPatients);
       }
-    } catch (error) {
-      console.error('Error fetching real patients:', error);
-    }
-  };
-
-  const fetchPatients = async () => {
-    try {
-      const { data: appointments, error } = await supabase
-        .from('appointments')
-        .select(`
-          family_id,
-          appointment_date,
-          status,
-          notes
-        `)
-        .order('appointment_date', { ascending: false });
-
-      if (error) throw error;
-
-      // Group by family_id to get unique patients
-      const uniquePatients = appointments?.reduce((acc: Patient[], appointment) => {
-        const existingPatient = acc.find(p => p.patient_id === appointment.family_id);
-        if (!existingPatient) {
-          acc.push({
-            patient_id: appointment.family_id,
-            patient_name: 'Patient', // We'll need to fetch from profiles
-            username: 'user', // We'll need to fetch from profiles
-            lastAppointment: appointment.appointment_date,
-            status: appointment.status || 'pending',
-            totalAppointments: 1,
-            details: appointment.notes || 'No details available'
-          });
-        } else {
-          existingPatient.totalAppointments += 1;
-        }
-        return acc;
-      }, []) || [];
-
-      setPatients(uniquePatients);
     } catch (error) {
       console.error('Error fetching patients:', error);
     } finally {
@@ -109,7 +115,7 @@ const DoctorPatients = () => {
     }
   };
 
-  const handleViewProgress = (patient: any) => {
+  const handleViewProgress = (patient: Patient) => {
     setSelectedPatient({
       ...patient,
       progressData: mockProgressData,
@@ -121,16 +127,14 @@ const DoctorPatients = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'confirmed':
+      case 'active':
         return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800';
+      case 'critical':
         return 'bg-red-100 text-red-800';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-blue-100 text-blue-800';
     }
   };
 
@@ -321,11 +325,11 @@ const DoctorPatients = () => {
 
                             <Card>
                               <CardHeader>
-                                <CardTitle className="text-lg">Treatment Notes</CardTitle>
+                                <CardTitle className="text-lg">Medical History</CardTitle>
                               </CardHeader>
                               <CardContent>
                                 <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                                  {selectedPatient.details || 'No additional treatment notes available.'}
+                                  {selectedPatient.details || 'No medical history available.'}
                                 </p>
                               </CardContent>
                             </Card>

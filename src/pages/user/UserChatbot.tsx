@@ -45,12 +45,19 @@ const UserChatbot = () => {
     setInput('');
     setLoading(true);
 
-    // Simulate AI response
+    // Simulate AI response with more helpful content
     setTimeout(() => {
+      const responses = [
+        'For headaches, try resting in a quiet, dark room and staying hydrated. If headaches persist or are severe, please consult your healthcare provider.',
+        'To prepare for your doctor visit, write down your symptoms, current medications, and any questions you have. Bring your insurance card and arrive 15 minutes early.',
+        'Common cold symptoms include runny nose, cough, sneezing, and mild fever. Rest, fluids, and over-the-counter medications can help. See a doctor if symptoms worsen or last more than 10 days.',
+        'Seek emergency care immediately for chest pain, difficulty breathing, severe bleeding, loss of consciousness, or signs of stroke. When in doubt, call emergency services.'
+      ];
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Thank you for your question. This is a demo response. In a real implementation, this would connect to an AI service to provide helpful health information. Please remember that this is for informational purposes only and not a substitute for professional medical advice.',
+        content: responses[Math.floor(Math.random() * responses.length)],
         timestamp: new Date()
       };
 

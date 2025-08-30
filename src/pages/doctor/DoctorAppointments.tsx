@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, User, MapPin, Eye, Users } from 'lucide-react';
+import { Calendar, Clock, User, MapPin, Eye, Users, CheckCircle, XCircle } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { toast } from '@/hooks/use-toast';
 
 interface Appointment {
   id: string;
@@ -15,8 +16,10 @@ interface Appointment {
   username: string;
   details: string;
   appointment_date: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'scheduled';
   created_at: string;
+  doctor_name?: string;
+  specialization?: string;
 }
 
 const DoctorAppointments = () => {
@@ -33,33 +36,40 @@ const DoctorAppointments = () => {
     try {
       const { data, error } = await supabase
         .from('appointments')
-        .select('*')
+        .select(`
+          *,
+          doctors!appointments_therapist_id_fkey(name, specialization)
+        `)
         .order('appointment_date', { ascending: true });
 
       if (error) throw error;
       
       if (data && data.length > 0) {
-        // Fetch patient details for each appointment
-        const appointmentsWithPatients = await Promise.all(
-          data.map(async (apt) => {
-            const { data: patient } = await supabase
-              .from('patients')
-              .select('patient_name, username')
-              .eq('user_id', apt.family_id)
-              .single();
+        const appointmentsWithPatients = data.map(apt => {
+          const notes = apt.notes || '';
+          const patientName = notes.includes('Patient: ') 
+            ? notes.split('Patient: ')[1]?.split('\n')[0] || 'Unknown Patient'
+            : 'Unknown Patient';
+          const username = notes.includes('Username: ')
+            ? notes.split('Username: ')[1]?.split('\n')[0] || 'unknown'
+            : 'unknown';
+          const details = notes.includes('Details: ')
+            ? notes.split('Details: ')[1]?.split('\n')[0] || 'No details provided'
+            : notes;
 
-            return {
-              id: apt.id,
-              patient_id: apt.family_id,
-              patient_name: patient?.patient_name || 'Unknown Patient',
-              username: patient?.username || 'unknown',
-              details: apt.notes || 'No details provided',
-              appointment_date: apt.appointment_date,
-              status: apt.status || 'pending',
-              created_at: apt.created_at
-            };
-          })
-        );
+          return {
+            id: apt.id,
+            patient_id: apt.family_id,
+            patient_name: patientName,
+            username: username,
+            details: details,
+            appointment_date: apt.appointment_date,
+            status: apt.status || 'scheduled',
+            created_at: apt.created_at,
+            doctor_name: apt.doctors?.name,
+            specialization: apt.doctors?.specialization
+          };
+        });
         
         setAppointments(appointmentsWithPatients);
       } else {
@@ -72,8 +82,10 @@ const DoctorAppointments = () => {
             username: 'johndoe',
             details: 'Regular checkup and blood pressure monitoring',
             appointment_date: '2024-01-25T10:00:00',
-            status: 'confirmed',
-            created_at: '2024-01-20T08:00:00'
+            status: 'scheduled',
+            created_at: '2024-01-20T08:00:00',
+            doctor_name: 'Dr. Sarah Johnson',
+            specialization: 'Cardiology'
           }
         ];
         setAppointments(mockAppointments);
@@ -82,6 +94,38 @@ const DoctorAppointments = () => {
       console.error('Error fetching appointments:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateAppointmentStatus = async (appointmentId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: newStatus })
+        .eq('id', appointmentId);
+
+      if (error) throw error;
+
+      setAppointments(prev => 
+        prev.map(apt => 
+          apt.id === appointmentId 
+            ? { ...apt, status: newStatus as any }
+            : apt
+        )
+      );
+
+      toast({
+        title: 'Status Updated',
+        description: `Appointment status changed to ${newStatus}`,
+      });
+
+    } catch (error) {
+      console.error('Error updating appointment status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update appointment status',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -95,7 +139,9 @@ const DoctorAppointments = () => {
         email: 'patient@example.com',
         details: appointment?.details || 'No additional details',
         appointmentDate: appointment?.appointment_date,
-        status: appointment?.status
+        status: appointment?.status,
+        doctor_name: appointment?.doctor_name,
+        specialization: appointment?.specialization
       });
     } catch (error) {
       console.error('Error fetching patient details:', error);
@@ -105,6 +151,7 @@ const DoctorAppointments = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
+      case 'scheduled':
         return 'bg-green-100 text-green-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
@@ -189,11 +236,11 @@ const DoctorAppointments = () => {
               <Users className="size-5 text-purple-600" />
               Appointment Overview
               <Badge className="bg-purple-100 text-purple-800 ml-auto">
-                {patientCount} Patients Registered
+                {patientCount} Patients • {appointments.length} Appointments
               </Badge>
             </CardTitle>
             <CardDescription>
-              Total appointments: {appointments.length}
+              Manage patient appointments and update status
             </CardDescription>
           </CardHeader>
         </Card>
@@ -223,6 +270,9 @@ const DoctorAppointments = () => {
                       </CardTitle>
                       <CardDescription className="mt-1">
                         Username: {appointment.username}
+                        {appointment.doctor_name && (
+                          <span className="block">Doctor: {appointment.doctor_name} ({appointment.specialization})</span>
+                        )}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -310,6 +360,39 @@ const DoctorAppointments = () => {
                         {appointment.details}
                       </p>
                     </div>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-4">
+                    {appointment.status === 'scheduled' && (
+                      <Button
+                        size="sm"
+                        onClick={() => updateAppointmentStatus(appointment.id, 'confirmed')}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="size-4 mr-2" />
+                        Confirm
+                      </Button>
+                    )}
+                    {(appointment.status === 'scheduled' || appointment.status === 'confirmed') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => updateAppointmentStatus(appointment.id, 'completed')}
+                        className="border-blue-200 hover:bg-blue-50"
+                      >
+                        Mark Complete
+                      </Button>
+                    )}
+                    {appointment.status !== 'cancelled' && appointment.status !== 'completed' && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => updateAppointmentStatus(appointment.id, 'cancelled')}
+                      >
+                        <XCircle className="size-4 mr-2" />
+                        Cancel
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -6,15 +6,27 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, User, Plus, CalendarCheck } from 'lucide-react';
+import { Calendar, Clock, User, Plus, CalendarCheck, Trash2 } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+interface Schedule {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  doctor_id: string;
+  title: string;
+  description: string;
+  schedule_date: string;
+  time: string;
+  created_at: string;
+}
+
 const DoctorSchedule = () => {
   const { user } = useRoleAuth();
   const [patients, setPatients] = useState<any[]>([]);
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     patientId: '',
@@ -31,26 +43,39 @@ const DoctorSchedule = () => {
 
   const fetchPatients = async () => {
     try {
-      // Mock patient data for demonstration
-      const mockPatients = [
-        {
-          patient_id: 'PAT001',
-          patient_name: 'John Doe',
-          username: 'johndoe'
-        },
-        {
-          patient_id: 'PAT002',
-          patient_name: 'Jane Smith',
-          username: 'janesmith'
-        },
-        {
-          patient_id: 'PAT003',
-          patient_name: 'Mike Johnson',
-          username: 'mikej'
-        }
-      ];
+      const { data, error } = await supabase
+        .from('patients')
+        .select('*')
+        .order('patient_name', { ascending: true });
+
+      if (error) throw error;
       
-      setPatients(mockPatients);
+      if (data && data.length > 0) {
+        setPatients(data);
+      } else {
+        // Fallback to mock data
+        const mockPatients = [
+          {
+            id: 'PAT001',
+            user_id: 'user1',
+            patient_name: 'John Doe',
+            username: 'johndoe'
+          },
+          {
+            id: 'PAT002',
+            user_id: 'user2',
+            patient_name: 'Jane Smith',
+            username: 'janesmith'
+          },
+          {
+            id: 'PAT003',
+            user_id: 'user3',
+            patient_name: 'Mike Johnson',
+            username: 'mikej'
+          }
+        ];
+        setPatients(mockPatients);
+      }
     } catch (error) {
       console.error('Error fetching patients:', error);
     }
@@ -58,28 +83,56 @@ const DoctorSchedule = () => {
 
   const fetchSchedules = async () => {
     try {
-      // In a real implementation, you would have a schedules table
-      // For now, we'll use mock data
-      setSchedules([
-        {
-          id: '1',
-          patient_name: 'John Doe',
-          title: 'Physical Therapy Session',
-          description: 'Lower back strengthening exercises',
-          schedule_date: '2024-01-20',
-          time: '10:00',
-          created_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          patient_name: 'Jane Smith',
-          title: 'Medication Review',
-          description: 'Review current medications and adjust dosage',
-          schedule_date: '2024-01-22',
-          time: '14:30',
-          created_at: new Date().toISOString()
-        }
-      ]);
+      const { data, error } = await supabase
+        .from('daily_schedules')
+        .select(`
+          *,
+          patients!daily_schedules_family_id_fkey(patient_name)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const transformedSchedules = data.map(schedule => ({
+          id: schedule.id,
+          patient_id: schedule.family_id,
+          patient_name: schedule.child_name,
+          doctor_id: user?.id || 'doctor',
+          title: schedule.schedule_name,
+          description: JSON.stringify(schedule.tasks),
+          schedule_date: new Date().toISOString().split('T')[0],
+          time: '09:00',
+          created_at: schedule.created_at
+        }));
+        setSchedules(transformedSchedules);
+      } else {
+        // Mock schedules for demonstration
+        setSchedules([
+          {
+            id: '1',
+            patient_id: 'PAT001',
+            patient_name: 'John Doe',
+            doctor_id: user?.id || 'doctor',
+            title: 'Physical Therapy Session',
+            description: 'Lower back strengthening exercises',
+            schedule_date: '2024-01-20',
+            time: '10:00',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: '2',
+            patient_id: 'PAT002',
+            patient_name: 'Jane Smith',
+            doctor_id: user?.id || 'doctor',
+            title: 'Medication Review',
+            description: 'Review current medications and adjust dosage',
+            schedule_date: '2024-01-22',
+            time: '14:30',
+            created_at: new Date().toISOString()
+          }
+        ]);
+      }
     } catch (error) {
       console.error('Error fetching schedules:', error);
     }
@@ -90,33 +143,40 @@ const DoctorSchedule = () => {
     setLoading(true);
 
     try {
-      const selectedPatient = patients.find(p => p.patient_id === formData.patientId);
+      const selectedPatient = patients.find(p => p.id === formData.patientId);
       
       if (!selectedPatient) {
         throw new Error('Please select a patient');
       }
 
-      // In a real implementation, you would save to a schedules table
-      const newSchedule = {
-        id: Date.now().toString(),
-        patient_id: formData.patientId,
-        patient_name: selectedPatient.patient_name,
-        doctor_id: user?.id,
-        title: formData.title,
-        description: formData.description,
-        schedule_date: formData.scheduleDate,
-        time: formData.time,
-        created_at: new Date().toISOString()
-      };
+      // Create schedule in daily_schedules table
+      const { data, error } = await supabase
+        .from('daily_schedules')
+        .insert([{
+          family_id: selectedPatient.user_id,
+          child_name: selectedPatient.patient_name,
+          schedule_name: formData.title,
+          tasks: [
+            {
+              id: Date.now().toString(),
+              title: formData.title,
+              description: formData.description,
+              time: formData.time,
+              completed: false
+            }
+          ],
+          is_active: true
+        }])
+        .select()
+        .single();
 
-      // For demo purposes, add to local state
-      setSchedules(prev => [newSchedule, ...prev]);
+      if (error) throw error;
 
       // Create notification for the patient
       const { error: notificationError } = await supabase
         .from('notifications')
         .insert([{
-          user_id: formData.patientId,
+          user_id: selectedPatient.user_id,
           title: 'New Schedule Assigned',
           message: `Dr. ${user?.user_metadata?.name || 'Doctor'} has assigned you a new schedule: ${formData.title} on ${formData.scheduleDate} at ${formData.time}`,
           type: 'schedule'
@@ -125,6 +185,21 @@ const DoctorSchedule = () => {
       if (notificationError) {
         console.error('Error creating notification:', notificationError);
       }
+
+      // Add to local state
+      const newSchedule: Schedule = {
+        id: data.id,
+        patient_id: formData.patientId,
+        patient_name: selectedPatient.patient_name,
+        doctor_id: user?.id || 'doctor',
+        title: formData.title,
+        description: formData.description,
+        schedule_date: formData.scheduleDate,
+        time: formData.time,
+        created_at: data.created_at
+      };
+
+      setSchedules(prev => [newSchedule, ...prev]);
 
       toast({
         title: 'Schedule Created!',
@@ -148,6 +223,32 @@ const DoctorSchedule = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteSchedule = async (scheduleId: string) => {
+    try {
+      const { error } = await supabase
+        .from('daily_schedules')
+        .delete()
+        .eq('id', scheduleId);
+
+      if (error) throw error;
+
+      setSchedules(prev => prev.filter(s => s.id !== scheduleId));
+      
+      toast({
+        title: 'Schedule Deleted',
+        description: 'The schedule has been removed successfully',
+      });
+
+    } catch (error) {
+      console.error('Error deleting schedule:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete schedule',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -209,7 +310,7 @@ const DoctorSchedule = () => {
                     </SelectTrigger>
                     <SelectContent>
                       {patients.map((patient) => (
-                        <SelectItem key={patient.patient_id} value={patient.patient_id}>
+                        <SelectItem key={patient.id} value={patient.id}>
                           <div className="flex items-center gap-2">
                             <User className="size-4" />
                             {patient.patient_name} (@{patient.username})
@@ -253,6 +354,7 @@ const DoctorSchedule = () => {
                       value={formData.scheduleDate}
                       onChange={(e) => setFormData({ ...formData, scheduleDate: e.target.value })}
                       className="bg-white/50"
+                      min={new Date().toISOString().split('T')[0]}
                       required
                     />
                   </div>
@@ -287,6 +389,9 @@ const DoctorSchedule = () => {
               <CardTitle className="flex items-center gap-2">
                 <CalendarCheck className="size-5 text-green-600" />
                 Active Schedules
+                <Badge className="bg-green-100 text-green-800 ml-auto">
+                  {schedules.length}
+                </Badge>
               </CardTitle>
               <CardDescription>
                 Recently created patient schedules
@@ -310,8 +415,18 @@ const DoctorSchedule = () => {
                     >
                       <div className="flex justify-between items-start mb-2">
                         <h4 className="font-semibold text-purple-800">{schedule.title}</h4>
-                        <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                          {schedule.patient_name}
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
+                            {schedule.patient_name}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => deleteSchedule(schedule.id)}
+                            className="h-6 w-6 p-0 border-red-200 hover:bg-red-50"
+                          >
+                            <Trash2 className="size-3 text-red-600" />
+                          </Button>
                         </div>
                       </div>
                       <p className="text-sm text-gray-700 mb-3">{schedule.description}</p>
