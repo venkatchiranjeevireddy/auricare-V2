@@ -402,3 +402,5 @@ const PatientProgress = () => {
 };
 
 export default PatientProgress;
+  )
+}
