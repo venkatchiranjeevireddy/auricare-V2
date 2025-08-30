@@ -51,7 +51,6 @@ const UserAppointments = () => {
       setDoctors(data || []);
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      // Fallback to mock data
       setDoctors([
         { id: 'doc1', doctor_id: 'DOC001', name: 'Dr. Sarah Johnson', specialization: 'Cardiology' },
         { id: 'doc2', doctor_id: 'DOC002', name: 'Dr. Michael Chen', specialization: 'Neurology' },
@@ -88,6 +87,12 @@ const UserAppointments = () => {
     }
   };
 
+  // ✅ Fix: Format date-time safely for Postgres
+  const formatDateTime = (date: string, time: string) => {
+    const combined = new Date(`${date}T${time}`);
+    return combined.toISOString().slice(0, 19).replace('T', ' ');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -100,7 +105,7 @@ const UserAppointments = () => {
         throw new Error('Please select a doctor');
       }
 
-      const appointmentDateTime = `${formData.appointmentDate}T${formData.appointmentTime}:00`;
+      const appointmentDateTime = formatDateTime(formData.appointmentDate, formData.appointmentTime);
       
       // Create appointment record
       const { data, error } = await supabase
@@ -118,7 +123,7 @@ const UserAppointments = () => {
 
       if (error) throw error;
 
-      // Create patient record if it doesn't exist
+      // Create or update patient record
       const { error: patientError } = await supabase
         .from('patients')
         .upsert([{
@@ -139,7 +144,6 @@ const UserAppointments = () => {
         description: `Your appointment with ${selectedDoctor.name} has been scheduled for ${new Date(appointmentDateTime).toLocaleDateString()} at ${formData.appointmentTime}`,
       });
 
-      // Reset form and refresh appointments
       setFormData({
         patientName: '',
         username: '',
@@ -185,6 +189,7 @@ const UserAppointments = () => {
       transition={{ duration: 0.5 }}
       className="max-w-4xl mx-auto space-y-8"
     >
+      {/* Booking Form */}
       <div className="text-center">
         <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Book Appointment
@@ -193,6 +198,7 @@ const UserAppointments = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
+        {/* Left side: form */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -296,6 +302,7 @@ const UserAppointments = () => {
           </CardContent>
         </Card>
 
+        {/* Right side: appointments list */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
