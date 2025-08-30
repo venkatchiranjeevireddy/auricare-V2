@@ -1,8 +1,23 @@
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from 'recharts';
 import { TrendingUp, Activity, Heart, Calendar } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +38,7 @@ const PatientProgress = () => {
     if (!user) return;
 
     try {
-      // Fetch patient progress
+      // Fetch patient id
       const { data: patient } = await supabase
         .from('patients')
         .select('id')
@@ -31,6 +46,7 @@ const PatientProgress = () => {
         .single();
 
       if (patient) {
+        // Progress
         const { data: progress, error: progressError } = await supabase
           .from('patient_progress')
           .select('*')
@@ -39,6 +55,7 @@ const PatientProgress = () => {
 
         if (progressError) throw progressError;
 
+        // Metrics
         const { data: metrics, error: metricsError } = await supabase
           .from('health_metrics')
           .select('*')
@@ -47,22 +64,24 @@ const PatientProgress = () => {
 
         if (metricsError) throw metricsError;
 
-        // Transform progress data
-        const transformedProgress = (progress || []).map(p => ({
+        const transformedProgress = (progress || []).map((p) => ({
           week: `Week ${p.week_number}`,
           health_score: p.health_score,
-          symptom_count: p.symptom_count
+          symptom_count: p.symptom_count,
         }));
 
-        // Transform health metrics
-        const transformedMetrics = (metrics || []).map(m => ({
+        const transformedMetrics = (metrics || []).map((m) => ({
           recorded_date: new Date(m.recorded_date).toLocaleDateString(),
           value: m.value,
-          metric_type: m.metric_type
+          metric_type: m.metric_type,
         }));
 
-        setProgressData(transformedProgress.length > 0 ? transformedProgress : weeklyData);
-        setHealthMetrics(transformedMetrics.length > 0 ? transformedMetrics : vitalSigns);
+        setProgressData(
+          transformedProgress.length > 0 ? transformedProgress : weeklyData
+        );
+        setHealthMetrics(
+          transformedMetrics.length > 0 ? transformedMetrics : vitalSigns
+        );
       } else {
         setProgressData(weeklyData);
         setHealthMetrics(vitalSigns);
@@ -76,14 +95,14 @@ const PatientProgress = () => {
     }
   };
 
-  // Mock data for charts
+  // Mock data
   const weeklyData = [
-    { week: 'Week 1', healthScore: 75, symptoms: 3 },
-    { week: 'Week 2', healthScore: 78, symptoms: 2 },
-    { week: 'Week 3', healthScore: 82, symptoms: 2 },
-    { week: 'Week 4', healthScore: 85, symptoms: 1 },
-    { week: 'Week 5', healthScore: 88, symptoms: 1 },
-    { week: 'Week 6', healthScore: 90, symptoms: 0 },
+    { week: 'Week 1', health_score: 75, symptom_count: 3 },
+    { week: 'Week 2', health_score: 78, symptom_count: 2 },
+    { week: 'Week 3', health_score: 82, symptom_count: 2 },
+    { week: 'Week 4', health_score: 85, symptom_count: 1 },
+    { week: 'Week 5', health_score: 88, symptom_count: 1 },
+    { week: 'Week 6', health_score: 90, symptom_count: 0 },
   ];
 
   const vitalSigns = [
@@ -98,10 +117,8 @@ const PatientProgress = () => {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+      transition: { staggerChildren: 0.1 },
+    },
   };
 
   const itemVariants = {
@@ -109,11 +126,8 @@ const PatientProgress = () => {
     visible: {
       y: 0,
       opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
+      transition: { type: 'spring', stiffness: 100 },
+    },
   };
 
   if (loading) {
@@ -134,13 +148,17 @@ const PatientProgress = () => {
       animate="visible"
       className="space-y-8"
     >
+      {/* Header */}
       <motion.div variants={itemVariants} className="text-center">
         <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
           Progress Tracker
         </h1>
-        <p className="text-gray-600 mt-2">Monitor your health journey with detailed reports</p>
+        <p className="text-gray-600 mt-2">
+          Monitor your health journey with detailed reports
+        </p>
       </motion.div>
 
+      {/* Stats Cards */}
       <motion.div
         variants={containerVariants}
         className="grid gap-6 md:grid-cols-3"
@@ -191,6 +209,7 @@ const PatientProgress = () => {
         </motion.div>
       </motion.div>
 
+      {/* Weekly Progress */}
       <motion.div variants={itemVariants}>
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
@@ -205,22 +224,24 @@ const PatientProgress = () => {
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={progressData.length > 0 ? progressData : weeklyData}>
+                <LineChart
+                  data={progressData.length > 0 ? progressData : weeklyData}
+                >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="week" />
                   <YAxis />
                   <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="health_score" 
-                    stroke="#16a34a" 
+                  <Line
+                    type="monotone"
+                    dataKey="health_score"
+                    stroke="#16a34a"
                     strokeWidth={3}
                     name="Health Score"
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="symptom_count" 
-                    stroke="#dc2626" 
+                  <Line
+                    type="monotone"
+                    dataKey="symptom_count"
+                    stroke="#dc2626"
                     strokeWidth={3}
                     name="Symptom Count"
                   />
@@ -231,104 +252,7 @@ const PatientProgress = () => {
         </Card>
       </motion.div>
 
-      <motion.div variants={itemVariants}>
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Heart className="size-5 text-red-600" />
-              Vital Signs Tracking
-            </CardTitle>
-            <CardDescription>
-      <motion.div
-        variants={containerVariants}
-        className="grid gap-6 md:grid-cols-3"
-      >
-        <motion.div variants={itemVariants}>
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-green-600">
-                <TrendingUp className="size-5" />
-                Health Score
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">90%</div>
-              <p className="text-sm text-gray-600">+5% from last week</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-blue-600">
-                <Activity className="size-5" />
-                Active Days
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">6/7</div>
-              <p className="text-sm text-gray-600">This week</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div variants={itemVariants}>
-          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-purple-600">
-                <Heart className="size-5" />
-                Avg Heart Rate
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-600">70 BPM</div>
-              <p className="text-sm text-gray-600">Normal range</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
-
-      <motion.div variants={itemVariants}>
-        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="size-5 text-green-600" />
-              Weekly Health Progress
-            </CardTitle>
-            <CardDescription>
-              Track your health score and symptom count over time
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={progressData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="week" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="health_score" 
-                    stroke="#16a34a" 
-                    strokeWidth={3}
-                    name="Health Score"
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="symptom_count" 
-                    stroke="#dc2626" 
-                    strokeWidth={3}
-                    name="Symptom Count"
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
-
+      {/* Health Metrics */}
       <motion.div variants={itemVariants}>
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
@@ -348,7 +272,11 @@ const PatientProgress = () => {
                   <XAxis dataKey="recorded_date" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="value" fill="#8b5cf6" name="Health Metric" />
+                  <Bar
+                    dataKey="value"
+                    fill="#8b5cf6"
+                    name="Health Metric"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -356,6 +284,7 @@ const PatientProgress = () => {
         </Card>
       </motion.div>
 
+      {/* Health Notes */}
       <motion.div variants={itemVariants}>
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
@@ -369,8 +298,12 @@ const PatientProgress = () => {
               <div className="p-4 bg-green-50 rounded-lg border-l-4 border-green-500">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold text-green-800">Excellent Progress</h4>
-                    <p className="text-sm text-green-700">Health score improved significantly this week</p>
+                    <h4 className="font-semibold text-green-800">
+                      Excellent Progress
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      Health score improved significantly this week
+                    </p>
                   </div>
                   <span className="text-xs text-green-600">2 days ago</span>
                 </div>
@@ -378,8 +311,12 @@ const PatientProgress = () => {
               <div className="p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold text-blue-800">Medication Reminder</h4>
-                    <p className="text-sm text-blue-700">Continue current medication as prescribed</p>
+                    <h4 className="font-semibold text-blue-800">
+                      Medication Reminder
+                    </h4>
+                    <p className="text-sm text-blue-700">
+                      Continue current medication as prescribed
+                    </p>
                   </div>
                   <span className="text-xs text-blue-600">5 days ago</span>
                 </div>
@@ -387,8 +324,12 @@ const PatientProgress = () => {
               <div className="p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold text-yellow-800">Follow-up Scheduled</h4>
-                    <p className="text-sm text-yellow-700">Next appointment scheduled for next week</p>
+                    <h4 className="font-semibold text-yellow-800">
+                      Follow-up Scheduled
+                    </h4>
+                    <p className="text-sm text-yellow-700">
+                      Next appointment scheduled for next week
+                    </p>
                   </div>
                   <span className="text-xs text-yellow-600">1 week ago</span>
                 </div>
@@ -402,5 +343,3 @@ const PatientProgress = () => {
 };
 
 export default PatientProgress;
-  )
-}
