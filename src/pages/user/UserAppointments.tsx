@@ -1,111 +1,85 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Calendar, Clock, User, Plus } from 'lucide-react';
-import { useRoleAuth } from '@/hooks/useRoleAuth';
-import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import {useState, useEffect} from "react";
+import {motion} from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {Textarea} from "@/components/ui/textarea";
+import {Calendar, Clock, Plus} from "lucide-react";
+import {useRoleAuth} from "@/hooks/useRoleAuth";
+import {toast} from "@/hooks/use-toast";
+import {supabase} from "@/integrations/supabase/client";
 
 const UserAppointments = () => {
-  const { user } = useRoleAuth();
-  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    patientName: user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || '',
-    username: user?.user_metadata?.username || '',
-    details: '',
-    appointmentDate: '',
-    appointmentTime: ''
+    patientName: "",
+    username: "",
+    appointmentDate: "",
+    appointmentTime: "",
+    details: "",
   });
-  const [appointments, setAppointments] = useState<any[]>([]);
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
 
+  // Example fetch appointments
   useEffect(() => {
-    fetchAppointments();
-  }, [user]);
-
-  const fetchAppointments = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .eq('family_id', user.id)
-        .order('appointment_date', { ascending: true });
-
-      if (error) throw error;
+    const fetchAppointments = async () => {
+      const {data} = await supabase.from("appointments").select("*");
       setAppointments(data || []);
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-    }
-  };
+    };
+    fetchAppointments();
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const appointmentData = {
-        family_id: user?.id,
-        therapist_id: user?.id, // For demo purposes, using same user
-        appointment_date: `${formData.appointmentDate}T${formData.appointmentTime}:00`,
+    const {data, error} = await supabase.from("appointments").insert([
+      {
+        patient_name: formData.patientName,
+        username: formData.username,
+        appointment_date: `${formData.appointmentDate} ${formData.appointmentTime}`,
         notes: formData.details,
-        status: 'pending'
-      };
+        status: "pending",
+      },
+    ]);
 
-      const { error } = await supabase
-        .from('appointments')
-        .insert([appointmentData]);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Appointment Booked!',
-        description: `Your appointment has been scheduled for ${formData.appointmentDate} at ${formData.appointmentTime}`,
-      });
-
-      // Reset form
-      setFormData({
-        patientName: user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || '',
-        username: user?.user_metadata?.username || '',
-        details: '',
-        appointmentDate: '',
-        appointmentTime: ''
-      });
-
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to book appointment',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+    if (error) {
+      toast.error("Error booking appointment");
+    } else {
+      toast.success("Appointment booked!");
+      setAppointments([...appointments, data[0]]);
     }
+    setLoading(false);
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      initial={{opacity: 0, y: 20}}
+      animate={{opacity: 1, y: 0}}
+      transition={{duration: 0.5}}
       className="max-w-2xl mx-auto space-y-8"
     >
       <div className="text-center">
         <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Book Appointment
         </h1>
-        <p className="text-gray-600 mt-2">Schedule your healthcare appointment</p>
+        <p className="text-gray-600 mt-2">
+          Schedule your healthcare appointment
+        </p>
       </div>
 
+      {/* Appointment Form */}
       <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Plus className="size-5 text-blue-600" />
-            New Appointment
+            <Plus className="size-5 text-blue-600" /> New Appointment
           </CardTitle>
           <CardDescription>
             Fill in your details to book an appointment
@@ -119,7 +93,9 @@ const UserAppointments = () => {
                 <Input
                   id="patientName"
                   value={formData.patientName}
-                  onChange={(e) => setFormData({ ...formData, patientName: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({...formData, patientName: e.target.value})
+                  }
                   className="bg-white/50"
                   required
                 />
@@ -129,7 +105,9 @@ const UserAppointments = () => {
                 <Input
                   id="username"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({...formData, username: e.target.value})
+                  }
                   className="bg-white/50"
                   required
                 />
@@ -143,7 +121,9 @@ const UserAppointments = () => {
                   id="appointmentDate"
                   type="date"
                   value={formData.appointmentDate}
-                  onChange={(e) => setFormData({ ...formData, appointmentDate: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({...formData, appointmentDate: e.target.value})
+                  }
                   className="bg-white/50"
                   required
                 />
@@ -154,7 +134,9 @@ const UserAppointments = () => {
                   id="appointmentTime"
                   type="time"
                   value={formData.appointmentTime}
-                  onChange={(e) => setFormData({ ...formData, appointmentTime: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({...formData, appointmentTime: e.target.value})
+                  }
                   className="bg-white/50"
                   required
                 />
@@ -166,7 +148,9 @@ const UserAppointments = () => {
               <Textarea
                 id="details"
                 value={formData.details}
-                onChange={(e) => setFormData({ ...formData, details: e.target.value })}
+                onChange={(e) =>
+                  setFormData({...formData, details: e.target.value})
+                }
                 placeholder="Please describe your symptoms or reason for the appointment..."
                 className="bg-white/50 min-h-[100px]"
                 required
@@ -178,17 +162,17 @@ const UserAppointments = () => {
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               disabled={loading}
             >
-              {loading ? 'Booking...' : 'Book Appointment'}
+              {loading ? "Booking..." : "Book Appointment"}
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+      {/* Appointment List */}
+      <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl mt-8">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Calendar className="size-5 text-green-600" />
-            Your Appointments
+            <Calendar className="size-5 text-green-600" /> Your Appointments
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -196,31 +180,46 @@ const UserAppointments = () => {
             <div className="text-center py-8 text-gray-500">
               <Clock className="size-12 mx-auto mb-4 opacity-50" />
               <p>No appointments scheduled</p>
-              <p className="text-sm mt-2">Your booked appointments will appear here</p>
+              <p className="text-sm mt-2">
+                Your booked appointments will appear here
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
               {appointments.map((appointment) => (
-                <div key={appointment.id} className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                <div
+                  key={appointment.id}
+                  className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border"
+                >
                   <div className="flex justify-between items-start mb-2">
                     <h4 className="font-semibold">Healthcare Appointment</h4>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                      appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
+                    <span
+                      className={`text-xs px-2 py-1 rounded-full ${
+                        appointment.status === "confirmed"
+                          ? "bg-green-100 text-green-800"
+                          : appointment.status === "pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
                       {appointment.status}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 mb-3">{appointment.notes}</p>
+                  <p className="text-sm text-gray-700 mb-3">
+                    {appointment.notes}
+                  </p>
                   <div className="flex items-center gap-4 text-xs text-gray-600">
                     <div className="flex items-center gap-1">
                       <Calendar className="size-3" />
-                      {new Date(appointment.appointment_date).toLocaleDateString()}
+                      {new Date(
+                        appointment.appointment_date
+                      ).toLocaleDateString()}
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="size-3" />
-                      {new Date(appointment.appointment_date).toLocaleTimeString()}
+                      {new Date(
+                        appointment.appointment_date
+                      ).toLocaleTimeString()}
                     </div>
                   </div>
                 </div>
