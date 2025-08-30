@@ -60,28 +60,7 @@ const RoleBasedAuth = () => {
     
     const result = await signIn(email, password);
     
-    if (!result.error) {
-      // The navigation will be handled by the auth state change in App.tsx
-      // But we can also handle it here as a fallback
-      setTimeout(() => {
-        const currentUser = JSON.parse(localStorage.getItem('sb-fxkziqywoiusggfpxhpi-auth-token') || '{}');
-        const userRole = currentUser?.user?.user_metadata?.role;
-        
-        switch (userRole) {
-          case 'doctor':
-            navigate('/doctor/dashboard');
-            break;
-          case 'patient':
-            navigate('/patient/dashboard');
-            break;
-          case 'user':
-            navigate('/user/dashboard');
-            break;
-          default:
-            navigate('/user/dashboard');
-        }
-      }, 100);
-    }
+    // Navigation will be handled by the auth state change in App.tsx
     
     setLoading(false);
   };
@@ -92,9 +71,7 @@ const RoleBasedAuth = () => {
     
     const result = await doctorSignIn(doctorId, password);
     
-    if (!result.error) {
-      navigate('/doctor/dashboard');
-    }
+    // Navigation will be handled by the auth state change in App.tsx
     
     setLoading(false);
   };

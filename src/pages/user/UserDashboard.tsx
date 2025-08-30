@@ -1,13 +1,56 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { CalendarCheck2, MessageSquare, User, Heart, Plus, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { GlassmorphismCard } from '@/components/ui/glassmorphism-card';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const UserDashboard = () => {
   const { user } = useRoleAuth();
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [appointmentCount, setAppointmentCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch user's appointments
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('family_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setAppointmentCount(appointments?.length || 0);
+      
+      // Transform appointments to recent activity
+      const activity = (appointments || []).slice(0, 3).map(apt => ({
+        id: apt.id,
+        title: 'Appointment Scheduled',
+        description: `Appointment on ${new Date(apt.appointment_date).toLocaleDateString()}`,
+        date: apt.created_at
+      }));
+
+      setRecentActivity(activity);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -54,6 +97,11 @@ const UserDashboard = () => {
             <div>
               <h2 className="text-xl font-semibold">Health Summary</h2>
               <p className="text-gray-600">Your health profile and recent activity</p>
+            </div>
+            <div className="ml-auto">
+              <Badge className="bg-blue-100 text-blue-800">
+                {appointmentCount} Appointments
+              </Badge>
             </div>
           </div>
         </GlassmorphismCard>
@@ -171,6 +219,11 @@ const UserDashboard = () => {
             <CardTitle>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              </div>
+            ) : 
             {recentActivity.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <Activity className="size-12 mx-auto mb-4 opacity-50" />
@@ -180,16 +233,19 @@ const UserDashboard = () => {
             ) : (
               <div className="space-y-3">
                 {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                    <Calendar className="size-5 text-blue-600" />
+                  <div key={activity.id} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <CalendarCheck2 className="size-5 text-blue-600" />
                     <div>
                       <p className="font-medium">{activity.title}</p>
                       <p className="text-sm text-gray-600">{activity.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(activity.date).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
+            ))}
           </CardContent>
         </Card>
       </motion.div>

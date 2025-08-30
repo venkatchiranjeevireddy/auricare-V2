@@ -1,17 +1,45 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Activity, Calendar, MessageSquare, TrendingUp, Heart, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { GlassmorphismCard } from '@/components/ui/glassmorphism-card';
-
+import { useState, useEffect } from 'react';
 import { usePatientNotifications } from '@/hooks/usePatientNotifications';
 import { Bell } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const PatientDashboard = () => {
   const { user } = useRoleAuth();
   const { notifications, unreadCount } = usePatientNotifications();
+  const [appointmentCount, setAppointmentCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
+
+  const fetchDashboardData = async () => {
+    if (!user) return;
+
+    try {
+      const { data: appointments, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('family_id', user.id);
+
+      if (error) throw error;
+      setAppointmentCount(appointments?.length || 0);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -59,14 +87,19 @@ const PatientDashboard = () => {
               <h2 className="text-xl font-semibold">Health Overview</h2>
               <p className="text-gray-600">Your current health status and recent reports</p>
             </div>
-            {unreadCount > 0 && (
-              <div className="ml-auto flex items-center gap-2">
-                <Bell className="size-5 text-orange-600" />
-                <Badge className="bg-orange-100 text-orange-800">
-                  {unreadCount} New
-                </Badge>
-              </div>
-            )}
+            <div className="ml-auto flex items-center gap-4">
+              <Badge className="bg-green-100 text-green-800">
+                {appointmentCount} Appointments
+              </Badge>
+              {unreadCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <Bell className="size-5 text-orange-600" />
+                  <Badge className="bg-orange-100 text-orange-800">
+                    {unreadCount} New
+                  </Badge>
+                </div>
+              )}
+            </div>
           </div>
         </GlassmorphismCard>
       </motion.div>

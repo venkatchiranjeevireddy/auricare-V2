@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Calendar, User, TrendingUp } from 'lucide-react';
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { NewsArticleModal } from '@/components/ui/news-article-modal';
@@ -24,10 +24,15 @@ const News = () => {
         .select('*')
         .order('published_date', { ascending: false });
 
-      if (error) throw error;
-      setArticles(data || []);
+      if (data && data.length > 0) {
+        setArticles(data);
+      } else {
+        // Use fallback articles if none in database
+        setArticles(newsArticles);
+      }
     } catch (error) {
       console.error('Error fetching news:', error);
+      setArticles(newsArticles);
     } finally {
       setLoading(false);
     }
@@ -114,6 +119,17 @@ const News = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="text-gray-500">Loading news...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -148,7 +164,7 @@ const News = () => {
         variants={containerVariants}
         className="grid gap-6 md:grid-cols-2"
       >
-        {(articles.length > 0 ? articles : newsArticles).map((article) => (
+        {articles.map((article) => (
           <motion.div key={article.id} variants={itemVariants}>
             <Card 
               className="bg-white/70 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 h-full cursor-pointer"
@@ -179,13 +195,11 @@ const News = () => {
                     <span>{new Date(article.published_date || article.date).toLocaleDateString()}</span>
                   </div>
                 </div>
-                {article.content && (
-                  <div className="mt-4">
-                    <Button size="sm" variant="outline" className="w-full">
-                      Read Full Article
-                    </Button>
-                  </div>
-                )}
+                <div className="mt-4">
+                  <Button size="sm" variant="outline" className="w-full">
+                    Read Full Article
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </motion.div>

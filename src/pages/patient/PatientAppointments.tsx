@@ -5,7 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar, Clock, User, MapPin } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Appointment } from '@/types/roles';
+
+interface Appointment {
+  id: string;
+  appointment_date: string;
+  notes: string;
+  status: string;
+  created_at: string;
+}
 
 const PatientAppointments = () => {
   const { user } = useRoleAuth();
@@ -13,7 +20,9 @@ const PatientAppointments = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAppointments();
+    if (user) {
+      fetchAppointments();
+    }
   }, [user]);
 
   const fetchAppointments = async () => {
@@ -27,20 +36,7 @@ const PatientAppointments = () => {
         .order('appointment_date', { ascending: true });
 
       if (error) throw error;
-      
-      // Transform data to match interface
-      const transformedData = (data || []).map(apt => ({
-        id: apt.id,
-        patient_id: apt.family_id,
-        patient_name: user?.user_metadata?.first_name + ' ' + user?.user_metadata?.last_name || 'Patient',
-        username: user?.user_metadata?.username || 'user',
-        details: apt.notes || 'No details provided',
-        appointment_date: apt.appointment_date,
-        status: apt.status || 'pending',
-        created_at: apt.created_at
-      }));
-      
-      setAppointments(transformedData);
+      setAppointments(data || []);
     } catch (error) {
       console.error('Error fetching appointments:', error);
     } finally {
@@ -106,7 +102,10 @@ const PatientAppointments = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-pulse text-gray-500">Loading appointments...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <div className="text-gray-500">Loading appointments...</div>
+        </div>
       </div>
     );
   }
@@ -148,7 +147,7 @@ const PatientAppointments = () => {
                         Appointment with Healthcare Provider
                       </CardTitle>
                       <CardDescription className="mt-1">
-                        Patient: {appointment.patient_name}
+                        Patient: {user?.user_metadata?.first_name} {user?.user_metadata?.last_name}
                       </CardDescription>
                     </div>
                     <Badge className={getStatusColor(appointment.status)}>
@@ -175,7 +174,7 @@ const PatientAppointments = () => {
                     <div>
                       <h4 className="font-semibold text-gray-800 mb-2">Appointment Details</h4>
                       <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
-                        {appointment.details}
+                        {appointment.notes || 'No details provided'}
                       </p>
                     </div>
                   </div>

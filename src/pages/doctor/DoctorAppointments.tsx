@@ -42,17 +42,33 @@ const DoctorAppointments = () => {
         // Fetch patient details for each appointment
         const appointmentsWithPatients = await Promise.all(
           data.map(async (apt) => {
+            // Try to get patient info from patients table first
             const { data: patient } = await supabase
               .from('patients')
               .select('patient_name, username')
               .eq('user_id', apt.family_id)
               .single();
 
+            // If no patient record, try to get from profiles
+            let patientName = patient?.patient_name;
+            let username = patient?.username;
+
+            if (!patientName) {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, display_name')
+                .eq('user_id', apt.family_id)
+                .single();
+
+              patientName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 'Unknown Patient';
+              username = profile?.display_name || 'unknown';
+            }
+
             return {
               id: apt.id,
               patient_id: apt.family_id,
-              patient_name: patient?.patient_name || 'Unknown Patient',
-              username: patient?.username || 'unknown',
+              patient_name: patientName || 'Unknown Patient',
+              username: username || 'unknown',
               details: apt.notes || 'No details provided',
               appointment_date: apt.appointment_date,
               status: apt.status || 'pending',
@@ -74,12 +90,46 @@ const DoctorAppointments = () => {
             appointment_date: '2024-01-25T10:00:00',
             status: 'confirmed',
             created_at: '2024-01-20T08:00:00'
+          },
+          {
+            id: '2',
+            patient_id: 'PAT002',
+            patient_name: 'Jane Smith',
+            username: 'janesmith',
+            details: 'Follow-up consultation for diabetes management',
+            appointment_date: '2024-01-26T14:30:00',
+            status: 'pending',
+            created_at: '2024-01-21T09:00:00'
+          },
+          {
+            id: '3',
+            patient_id: 'PAT003',
+            patient_name: 'Mike Johnson',
+            username: 'mikej',
+            details: 'Initial consultation for back pain',
+            appointment_date: '2024-01-27T11:15:00',
+            status: 'confirmed',
+            created_at: '2024-01-22T10:30:00'
           }
         ];
         setAppointments(mockAppointments);
       }
     } catch (error) {
       console.error('Error fetching appointments:', error);
+      // Show mock data on error
+      const mockAppointments: Appointment[] = [
+        {
+          id: '1',
+          patient_id: 'PAT001',
+          patient_name: 'John Doe',
+          username: 'johndoe',
+          details: 'Regular checkup and blood pressure monitoring',
+          appointment_date: '2024-01-25T10:00:00',
+          status: 'confirmed',
+          created_at: '2024-01-20T08:00:00'
+        }
+      ];
+      setAppointments(mockAppointments);
     } finally {
       setLoading(false);
     }
@@ -160,7 +210,10 @@ const DoctorAppointments = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-pulse text-gray-500">Loading appointments...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+          <div className="text-gray-500">Loading appointments...</div>
+        </div>
       </div>
     );
   }
@@ -189,11 +242,11 @@ const DoctorAppointments = () => {
               <Users className="size-5 text-purple-600" />
               Appointment Overview
               <Badge className="bg-purple-100 text-purple-800 ml-auto">
-                {patientCount} Patients Registered
+                {patientCount} Patients • {appointments.length} Appointments
               </Badge>
             </CardTitle>
             <CardDescription>
-              Total appointments: {appointments.length}
+              Manage all patient appointments and schedules
             </CardDescription>
           </CardHeader>
         </Card>

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { TrendingUp, Activity, Heart, Calendar } from 'lucide-react';
-
+import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,7 +14,9 @@ const PatientProgress = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProgressData();
+    if (user) {
+      fetchProgressData();
+    }
   }, [user]);
 
   const fetchProgressData = async () => {
@@ -45,8 +47,22 @@ const PatientProgress = () => {
 
         if (metricsError) throw metricsError;
 
-        setProgressData(progress || weeklyData);
-        setHealthMetrics(metrics || vitalSigns);
+        // Transform progress data
+        const transformedProgress = (progress || []).map(p => ({
+          week: `Week ${p.week_number}`,
+          health_score: p.health_score,
+          symptom_count: p.symptom_count
+        }));
+
+        // Transform health metrics
+        const transformedMetrics = (metrics || []).map(m => ({
+          recorded_date: new Date(m.recorded_date).toLocaleDateString(),
+          value: m.value,
+          metric_type: m.metric_type
+        }));
+
+        setProgressData(transformedProgress.length > 0 ? transformedProgress : weeklyData);
+        setHealthMetrics(transformedMetrics.length > 0 ? transformedMetrics : vitalSigns);
       } else {
         setProgressData(weeklyData);
         setHealthMetrics(vitalSigns);
@@ -71,11 +87,11 @@ const PatientProgress = () => {
   ];
 
   const vitalSigns = [
-    { date: '2024-01-01', heartRate: 72, bloodPressure: 120 },
-    { date: '2024-01-08', heartRate: 75, bloodPressure: 118 },
-    { date: '2024-01-15', heartRate: 70, bloodPressure: 115 },
-    { date: '2024-01-22', heartRate: 68, bloodPressure: 112 },
-    { date: '2024-01-29', heartRate: 70, bloodPressure: 110 },
+    { recorded_date: '2024-01-01', value: 72, metric_type: 'Heart Rate' },
+    { recorded_date: '2024-01-08', value: 75, metric_type: 'Heart Rate' },
+    { recorded_date: '2024-01-15', value: 70, metric_type: 'Heart Rate' },
+    { recorded_date: '2024-01-22', value: 68, metric_type: 'Heart Rate' },
+    { recorded_date: '2024-01-29', value: 70, metric_type: 'Heart Rate' },
   ];
 
   const containerVariants = {
@@ -99,6 +115,17 @@ const PatientProgress = () => {
       }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+          <div className="text-gray-500">Loading progress data...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -212,13 +239,111 @@ const PatientProgress = () => {
               Vital Signs Tracking
             </CardTitle>
             <CardDescription>
-              Monitor your heart rate and blood pressure trends
+      <motion.div
+        variants={containerVariants}
+        className="grid gap-6 md:grid-cols-3"
+      >
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <TrendingUp className="size-5" />
+                Health Score
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600">90%</div>
+              <p className="text-sm text-gray-600">+5% from last week</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <Activity className="size-5" />
+                Active Days
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600">6/7</div>
+              <p className="text-sm text-gray-600">This week</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-purple-600">
+                <Heart className="size-5" />
+                Avg Heart Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600">70 BPM</div>
+              <p className="text-sm text-gray-600">Normal range</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="size-5 text-green-600" />
+              Weekly Health Progress
+            </CardTitle>
+            <CardDescription>
+              Track your health score and symptom count over time
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={healthMetrics.length > 0 ? healthMetrics : vitalSigns}>
+                <LineChart data={progressData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="week" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line 
+                    type="monotone" 
+                    dataKey="health_score" 
+                    stroke="#16a34a" 
+                    strokeWidth={3}
+                    name="Health Score"
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="symptom_count" 
+                    stroke="#dc2626" 
+                    strokeWidth={3}
+                    name="Symptom Count"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div variants={itemVariants}>
+        <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Heart className="size-5 text-red-600" />
+              Health Metrics Tracking
+            </CardTitle>
+            <CardDescription>
+              Monitor your vital signs and health data trends
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={healthMetrics}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="recorded_date" />
                   <YAxis />

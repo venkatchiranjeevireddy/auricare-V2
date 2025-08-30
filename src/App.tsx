@@ -39,15 +39,12 @@ function AppRoutes() {
   const { user, userRole, loading } = useRoleAuth();
   const navigate = useNavigate();
 
-  // Read localStorage once outside JSX for doctor flag
-  const isDoctorInStorage = typeof window !== 'undefined' && localStorage.getItem("doctor");
-
-  // useEffect must be at top level (no conditions)
   useEffect(() => {
-    if (user && userRole) {
+    if (!loading && user && userRole) {
       const currentPath = window.location.pathname;
 
-      if (currentPath === "/" || currentPath === "/auth") {
+      // Only redirect from root or auth pages
+      if (currentPath === "/" || currentPath === "/auth" || currentPath === "/login") {
         switch (userRole) {
           case "doctor":
             navigate("/doctor/dashboard");
@@ -63,12 +60,15 @@ function AppRoutes() {
         }
       }
     }
-  }, [user, userRole, navigate]);
+  }, [user, userRole, loading, navigate]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -76,6 +76,9 @@ function AppRoutes() {
   if (!user) {
     return <RoleBasedAuth />;
   }
+
+  // Check for doctor session in localStorage
+  const isDoctorInStorage = typeof window !== 'undefined' && localStorage.getItem("doctor");
 
   return (
     <RoleBasedLayout>

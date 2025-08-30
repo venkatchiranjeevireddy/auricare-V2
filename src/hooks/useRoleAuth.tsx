@@ -1,7 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { UserRole } from "@/types/roles";
 
@@ -23,7 +22,6 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
     // Check for stored doctor session on mount
@@ -40,7 +38,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setUserRole(session?.user?.user_metadata?.role || null);
@@ -63,7 +61,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password,
       options: {
-        emailRedirectTo: "http://localhost:5173/auth/callback",
+        emailRedirectTo: window.location.origin,
         data: { role, ...metadata }
       }
     });
@@ -71,7 +69,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) {
       toast({ title: "Sign Up Error", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Account Created", description: "Please check your email for verification." });
+      toast({ title: "Account Created", description: "Welcome to the platform!" });
     }
 
     return { error };
@@ -86,11 +84,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       return { error };
     }
 
-    const role = data.user?.user_metadata?.role;
-    
-    // Navigation will be handled by the auth state change
     toast({ title: "Welcome back!", description: "Successfully signed in" });
-
     return { error: null };
   };
 
@@ -126,8 +120,6 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(doctorUser as any);
       setUserRole('doctor');
       
-      navigate("/doctor/dashboard");
-      
       toast({ title: "Welcome Doctor", description: `Successfully logged in as ${doctor.name}` });
       
       return { error: null };
@@ -150,7 +142,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     localStorage.removeItem("doctor");
-    navigate("/auth");
+    window.location.href = "/";
     toast({ title: "Signed out", description: "You have been signed out successfully." });
   };
 
