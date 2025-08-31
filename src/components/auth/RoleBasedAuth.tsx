@@ -39,7 +39,15 @@ const RoleBasedAuth = () => {
     e.preventDefault();
     setLoading(true);
     
-    await signIn(email, password);
+    try {
+      const result = await signIn(email, password);
+      if (!result.error) {
+        // Success - navigation will be handled by useRoleAuth
+        console.log('Sign in successful');
+      }
+    } catch (error) {
+      console.error('Sign in failed:', error);
+    }
     
     setLoading(false);
   };
@@ -48,7 +56,15 @@ const RoleBasedAuth = () => {
     e.preventDefault();
     setLoading(true);
     
-    await doctorSignIn(doctorId, password);
+    try {
+      const result = await doctorSignIn(doctorId, password);
+      if (!result.error) {
+        // Success - navigation will be handled by useRoleAuth
+        console.log('Doctor sign in successful');
+      }
+    } catch (error) {
+      console.error('Doctor sign in failed:', error);
+    }
     
     setLoading(false);
   };

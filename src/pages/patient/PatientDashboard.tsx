@@ -7,7 +7,7 @@ import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { GlassmorphismCard } from '@/components/ui/glassmorphism-card';
 
 import { usePatientNotifications } from '@/hooks/usePatientNotifications';
-import { Bell } from 'lucide-react';
+import { Bell, Badge } from 'lucide-react';
 
 const PatientDashboard = () => {
   const { user } = useRoleAuth();
@@ -62,9 +62,9 @@ const PatientDashboard = () => {
             {unreadCount > 0 && (
               <div className="ml-auto flex items-center gap-2">
                 <Bell className="size-5 text-orange-600" />
-                <Badge className="bg-orange-100 text-orange-800">
+                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
                   {unreadCount} New
-                </Badge>
+                </span>
               </div>
             )}
           </div>
@@ -183,9 +183,9 @@ const PatientDashboard = () => {
             <CardTitle className="flex items-center gap-2">
               Recent Reports & Notifications
               {unreadCount > 0 && (
-                <Badge className="bg-orange-100 text-orange-800">
+                <span className="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium">
                   {unreadCount}
-                </Badge>
+                </span>
               )}
             </CardTitle>
           </CardHeader>

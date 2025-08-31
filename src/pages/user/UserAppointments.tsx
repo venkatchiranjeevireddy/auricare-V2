@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Plus, User, Badge } from 'lucide-react';
+import { Calendar, Clock, Plus, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,7 +52,6 @@ const UserAppointments = () => {
       setDoctors(data || []);
     } catch (error) {
       console.error('Error fetching doctors:', error);
-      // Fallback to mock data
       setDoctors([
         { id: 'doc1', doctor_id: 'DOC001', name: 'Dr. Sarah Johnson', specialization: 'Cardiology' },
         { id: 'doc2', doctor_id: 'DOC002', name: 'Dr. Michael Chen', specialization: 'Neurology' },
@@ -74,8 +74,12 @@ const UserAppointments = () => {
       
       const transformedData = (data || []).map(apt => ({
         id: apt.id,
-        patient_name: apt.notes?.split('Patient: ')[1]?.split('\n')[0] || 'Unknown Patient',
-        username: apt.notes?.split('Username: ')[1]?.split('\n')[0] || 'unknown',
+        patient_name: apt.notes?.includes('Patient: ') 
+          ? apt.notes.split('Patient: ')[1]?.split('\n')[0] || 'Unknown Patient'
+          : 'Unknown Patient',
+        username: apt.notes?.includes('Username: ')
+          ? apt.notes.split('Username: ')[1]?.split('\n')[0] || 'unknown'
+          : 'unknown',
         appointment_date: apt.appointment_date,
         notes: apt.notes || 'No details provided',
         status: apt.status || 'pending',
@@ -85,6 +89,22 @@ const UserAppointments = () => {
       setAppointments(transformedData);
     } catch (error) {
       console.error('Error fetching appointments:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load appointments',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // ✅ Fix: Format date-time safely for Postgres
+  const formatDateTime = (date: string, time: string) => {
+    try {
+      const combined = new Date(`${date}T${time}:00`);
+      return combined.toISOString();
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return new Date().toISOString();
     }
   };
 
@@ -100,10 +120,10 @@ const UserAppointments = () => {
         throw new Error('Please select a doctor');
       }
 
-      const appointmentDateTime = `${formData.appointmentDate}T${formData.appointmentTime}:00`;
+      const appointmentDateTime = formatDateTime(formData.appointmentDate, formData.appointmentTime);
       
       // Create appointment record
-      const { data, error } = await supabase
+      const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
         .insert([{
           family_id: user.id,
@@ -111,35 +131,52 @@ const UserAppointments = () => {
           appointment_date: appointmentDateTime,
           duration_minutes: 60,
           status: 'scheduled',
-          notes: `Patient: ${formData.patientName}\nUsername: ${formData.username}\nDetails: ${formData.details}\nDoctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
+          notes: `Patient: ${formData.patientName}
+Username: ${formData.username}
+Details: ${formData.details}
+Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (appointmentError) {
+        console.error('Appointment creation error:', appointmentError);
+        throw new Error(`Failed to create appointment: ${appointmentError.message}`);
+      }
 
-      // Create patient record if it doesn't exist
-      const { error: patientError } = await supabase
+      // Create or update patient record
+      const { data: patientData, error: patientError } = await supabase
         .from('patients')
-        .upsert([{
+        .insert([{
           user_id: user.id,
           patient_name: formData.patientName,
           username: formData.username,
           medical_history: formData.details
-        }], {
-          onConflict: 'user_id'
-        });
+        }])
+        .select()
+        .single();
 
       if (patientError) {
-        console.error('Error creating patient record:', patientError);
+        // Try to update existing patient record
+        const { error: updateError } = await supabase
+          .from('patients')
+          .update({
+            patient_name: formData.patientName,
+            username: formData.username,
+            medical_history: formData.details
+          })
+          .eq('user_id', user.id);
+        
+        if (updateError) {
+          console.error('Error updating patient record:', updateError);
+        }
       }
 
       toast({
         title: 'Appointment Booked!',
-        description: `Your appointment with ${selectedDoctor.name} has been scheduled for ${new Date(appointmentDateTime).toLocaleDateString()} at ${formData.appointmentTime}`,
+        description: `Your appointment with ${selectedDoctor.name} has been scheduled successfully.`,
       });
 
-      // Reset form and refresh appointments
       setFormData({
         patientName: '',
         username: '',
@@ -151,7 +188,7 @@ const UserAppointments = () => {
       
       fetchAppointments();
 
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to book appointment',
@@ -185,6 +222,7 @@ const UserAppointments = () => {
       transition={{ duration: 0.5 }}
       className="max-w-4xl mx-auto space-y-8"
     >
+      {/* Booking Form */}
       <div className="text-center">
         <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Book Appointment
@@ -193,6 +231,7 @@ const UserAppointments = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
+        {/* Left side: form */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -296,6 +335,7 @@ const UserAppointments = () => {
           </CardContent>
         </Card>
 
+        {/* Right side: appointments list */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
