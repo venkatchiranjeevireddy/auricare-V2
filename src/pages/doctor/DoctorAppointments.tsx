@@ -34,18 +34,20 @@ const DoctorAppointments = () => {
 
   const fetchAppointments = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: appointmentsData, error } = await supabase
         .from('appointments')
-        .select(`
-          *,
-          doctors!appointments_therapist_id_fkey(name, specialization)
-        `)
+        .select('*')
         .order('appointment_date', { ascending: true });
 
       if (error) throw error;
       
-      if (data && data.length > 0) {
-        const appointmentsWithPatients = data.map(apt => {
+      if (appointmentsData && appointmentsData.length > 0) {
+        // Fetch doctor details separately
+        const { data: doctorsData } = await supabase
+          .from('doctors')
+          .select('*');
+
+        const appointmentsWithPatients = appointmentsData.map(apt => {
           const notes = apt.notes || '';
           const patientName = notes.includes('Patient: ') 
             ? notes.split('Patient: ')[1]?.split('\n')[0] || 'Unknown Patient'
@@ -56,6 +58,10 @@ const DoctorAppointments = () => {
           const details = notes.includes('Details: ')
             ? notes.split('Details: ')[1]?.split('\n')[0] || 'No details provided'
             : notes;
+          
+          // Find doctor info
+          const doctor = doctorsData?.find(d => d.id === apt.therapist_id);
+          const doctorName = notes.includes('Doctor: ') ? notes.split('Doctor: ')[1]?.split('\n')[0] : doctor?.name;
 
           return {
             id: apt.id,
@@ -66,8 +72,8 @@ const DoctorAppointments = () => {
             appointment_date: apt.appointment_date,
             status: apt.status || 'scheduled',
             created_at: apt.created_at,
-            doctor_name: apt.doctors?.name,
-            specialization: apt.doctors?.specialization
+            doctor_name: doctorName,
+            specialization: doctor?.specialization
           };
         });
         

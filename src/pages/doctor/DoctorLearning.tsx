@@ -196,9 +196,12 @@ const DoctorLearning = () => {
 
   const incrementViews = async (videoId: string) => {
     try {
+      const currentVideo = videos.find(v => v.id === videoId);
+      if (!currentVideo) return;
+
       const { error } = await supabase
         .from('learning_videos')
-        .update({ views: videos.find(v => v.id === videoId)?.views + 1 || 1 })
+        .update({ views: currentVideo.views + 1 })
         .eq('id', videoId);
 
       if (error) throw error;
@@ -212,6 +215,60 @@ const DoctorLearning = () => {
       );
     } catch (error) {
       console.error('Error updating views:', error);
+    }
+  };
+
+  // Helper function to extract YouTube video ID
+  const extractYouTubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  // Function to play video in modal or new window
+  const playVideo = (video: LearningVideo) => {
+    incrementViews(video.id);
+    
+    const videoId = extractYouTubeId(video.video_url);
+    if (videoId) {
+      // Create YouTube embed URL
+      const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+      
+      // Open in a new window with specific dimensions
+      const popup = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      if (popup) {
+        popup.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>${video.title}</title>
+              <style>
+                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #f5f5f5; }
+                .video-container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+                .video-title { margin-bottom: 15px; color: #333; }
+                iframe { border-radius: 8px; }
+              </style>
+            </head>
+            <body>
+              <div class="video-container">
+                <h2 class="video-title">${video.title}</h2>
+                <iframe 
+                  width="760" 
+                  height="428" 
+                  src="${embedUrl}" 
+                  frameborder="0" 
+                  allowfullscreen>
+                </iframe>
+                <p style="margin-top: 15px; color: #666;">${video.description}</p>
+              </div>
+            </body>
+          </html>
+        `);
+        popup.document.close();
+      }
+    } else {
+      // Fallback to opening original URL
+      window.open(video.video_url, '_blank');
     }
   };
 
@@ -355,9 +412,9 @@ const DoctorLearning = () => {
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="size-5 text-green-600" />
                 Training Videos Library
-                <Badge className="bg-green-100 text-green-800 ml-auto">
+                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium ml-auto">
                   {videos.length} Videos
-                </Badge>
+                </span>
               </CardTitle>
               <CardDescription>
                 Manage your uploaded training content
@@ -381,11 +438,8 @@ const DoctorLearning = () => {
                       <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors duration-300" />
                       <div className="absolute inset-0 flex items-center justify-center">
                         <button 
-                          onClick={() => {
-                            incrementViews(video.id);
-                            window.open(video.video_url, '_blank');
-                          }}
-                          className="flex items-center justify-center"
+                          onClick={() => playVideo(video)}
+                          className="flex items-center justify-center hover:scale-110 transition-transform duration-200"
                         >
                           <PlayCircle className="size-12 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300" />
                         </button>
@@ -397,7 +451,10 @@ const DoctorLearning = () => {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => deleteVideo(video.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteVideo(video.id);
+                          }}
                           className="h-6 w-6 p-0 bg-red-500/80 border-red-600 hover:bg-red-600"
                         >
                           <Trash2 className="size-3 text-white" />
@@ -426,16 +483,13 @@ const DoctorLearning = () => {
                       
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <span>Uploaded: {new Date(video.uploadDate).toLocaleDateString()}</span>
-                        <Button size="sm" variant="outline" asChild>
-                          <a 
-                            href={video.video_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            onClick={() => incrementViews(video.id)}
-                          >
-                            <Video className="size-3 mr-1" />
-                            View
-                          </a>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => playVideo(video)}
+                        >
+                          <Video className="size-3 mr-1" />
+                          Play
                         </Button>
                       </div>
                     </div>

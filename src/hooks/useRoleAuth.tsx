@@ -79,25 +79,34 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ✅ Normal User Sign-in
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      toast({ title: "Sign In Error", description: error.message, variant: "destructive" });
-      return { error };
+      if (error) {
+        toast({ title: "Sign In Error", description: error.message, variant: "destructive" });
+        return { error };
+      }
+
+      const role = data.user?.user_metadata?.role;
+      
+      // Small delay to ensure state updates
+      setTimeout(() => {
+        // Navigate based on role
+        if (role === "doctor") {
+          navigate("/doctor/dashboard");
+        } else if (role === "patient") {
+          navigate("/patient/dashboard");
+        } else {
+          navigate("/user/dashboard");
+        }
+      }, 100);
+
+      return { error: null };
+    } catch (err) {
+      console.error('Sign in error:', err);
+      toast({ title: "Sign In Error", description: "Authentication failed", variant: "destructive" });
+      return { error: err };
     }
-
-    const role = data.user?.user_metadata?.role;
-    
-    // Navigate based on role
-    if (role === "doctor") {
-      navigate("/doctor/dashboard");
-    } else if (role === "patient") {
-      navigate("/patient/dashboard");
-    } else {
-      navigate("/user/dashboard");
-    }
-
-    return { error: null };
   };
 
   // ✅ Doctor Sign-in using `doctors` table
@@ -134,7 +143,10 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(doctorUser as any);
       setUserRole('doctor');
       
-      navigate("/doctor/dashboard");
+      // Use setTimeout to ensure state updates before navigation
+      setTimeout(() => {
+        navigate("/doctor/dashboard");
+      }, 100);
       
       toast({ title: "Welcome Doctor", description: `Successfully logged in as ${doctor.name}` });
       
