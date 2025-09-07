@@ -40,44 +40,82 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setUserRole(session?.user?.user_metadata?.role || null);
+      
+      if (session?.user) {
+        // Get user role from metadata or default to 'user'
+        const role = session.user.user_metadata?.role || 'user';
+        setUserRole(role);
+      } else {
+        setUserRole(null);
+      }
+      
       setLoading(false);
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      setUserRole(session?.user?.user_metadata?.role || null);
+      
+      if (session?.user) {
+        const role = session.user.user_metadata?.role || 'user';
+        setUserRole(role);
+      }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // ✅ Normal User Sign-up
   const signUp = async (email: string, password: string, role: UserRole, metadata?: any) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: "http://localhost:5173/auth/callback",
-        data: { role, ...metadata }
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { role, ...metadata }
+        }
+      });
+
+      if (error) {
+        toast({ title: "Sign Up Error", description: error.message, variant: "destructive" });
+        return { error };
       }
-    });
 
-    if (error) {
-      toast({ title: "Sign Up Error", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Account Created", description: "Please check your email for verification." });
+      if (data.user && !data.session) {
+        toast({ 
+          title: "Check your email", 
+          description: "Please check your email for verification link." 
+        });
+      } else if (data.session) {
+        toast({ 
+          title: "Account Created", 
+          description: "Welcome! Your account has been created successfully." 
+        });
+        
+        // Navigate based on role
+        setTimeout(() => {
+          if (role === "doctor") {
+            navigate("/doctor/dashboard");
+          } else if (role === "patient") {
+            navigate("/patient/dashboard");
+          } else {
+            navigate("/user/dashboard");
+          }
+        }, 100);
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Sign up error:', err);
+      toast({ title: "Sign Up Error", description: "Failed to create account", variant: "destructive" });
+      return { error: err };
     }
-
-    return { error };
   };
 
-  // ✅ Normal User Sign-in
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -87,11 +125,15 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
         return { error };
       }
 
-      const role = data.user?.user_metadata?.role;
+      const role = data.user?.user_metadata?.role || 'user';
       
-      // Small delay to ensure state updates
+      toast({ 
+        title: "Welcome back!", 
+        description: "You have been signed in successfully." 
+      });
+      
+      // Navigate based on role
       setTimeout(() => {
-        // Navigate based on role
         if (role === "doctor") {
           navigate("/doctor/dashboard");
         } else if (role === "patient") {
@@ -109,10 +151,8 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ Doctor Sign-in using `doctors` table
   const doctorSignIn = async (doctorId: string, password: string) => {
     try {
-      // Temporary: Use hardcoded doctor credentials until migration is applied
       const validDoctors = [
         { id: 'doc1', doctor_id: 'DOC001', name: 'Dr. Sarah Johnson', email: 'sarah.johnson@hospital.com', specialization: 'Cardiology', password: 'doctor123' },
         { id: 'doc2', doctor_id: 'DOC002', name: 'Dr. Michael Chen', email: 'michael.chen@hospital.com', specialization: 'Neurology', password: 'doctor456' },
@@ -126,7 +166,6 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: "Invalid doctor credentials" };
       }
 
-      // Create a mock doctor user object
       const doctorUser = {
         id: doctor.id,
         email: doctor.email,
@@ -138,12 +177,10 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
         }
       };
 
-      // Store doctor info and update auth state
       localStorage.setItem("doctor", JSON.stringify(doctorUser));
       setUser(doctorUser as any);
       setUserRole('doctor');
       
-      // Use setTimeout to ensure state updates before navigation
       setTimeout(() => {
         navigate("/doctor/dashboard");
       }, 100);
@@ -157,9 +194,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // ✅ Sign-out
   const signOut = async () => {
-    // Check if it's a doctor session
     const storedDoctor = localStorage.getItem("doctor");
     if (storedDoctor) {
       localStorage.removeItem("doctor");
@@ -170,7 +205,7 @@ export const RoleAuthProvider = ({ children }: { children: ReactNode }) => {
     }
     
     localStorage.removeItem("doctor");
-    navigate("/auth");
+    navigate("/");
     toast({ title: "Signed out", description: "You have been signed out successfully." });
   };
 

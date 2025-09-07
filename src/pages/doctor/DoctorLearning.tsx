@@ -71,7 +71,6 @@ const DoctorLearning = () => {
       }));
 
       if (transformedVideos.length === 0) {
-        // Add some sample videos if none exist
         const sampleVideos = [
           {
             id: 'sample1',
@@ -148,7 +147,6 @@ const DoctorLearning = () => {
         description: `"${formData.title}" has been added to the learning hub`,
       });
 
-      // Reset form
       setFormData({
         title: '',
         description: '',
@@ -218,24 +216,20 @@ const DoctorLearning = () => {
     }
   };
 
-  // Helper function to extract YouTube video ID
   const extractYouTubeId = (url: string) => {
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  // Function to play video in modal or new window
   const playVideo = (video: LearningVideo) => {
     incrementViews(video.id);
     
     const videoId = extractYouTubeId(video.video_url);
     if (videoId) {
-      // Create YouTube embed URL
       const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
       
-      // Open in a new window with specific dimensions
-      const popup = window.open('', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+      const popup = window.open('', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
       if (popup) {
         popup.document.write(`
           <!DOCTYPE html>
@@ -243,23 +237,65 @@ const DoctorLearning = () => {
             <head>
               <title>${video.title}</title>
               <style>
-                body { margin: 0; padding: 20px; font-family: Arial, sans-serif; background: #f5f5f5; }
-                .video-container { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-                .video-title { margin-bottom: 15px; color: #333; }
-                iframe { border-radius: 8px; }
+                body { 
+                  margin: 0; 
+                  padding: 20px; 
+                  font-family: 'Inter', Arial, sans-serif; 
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  min-height: 100vh;
+                }
+                .video-container { 
+                  background: white; 
+                  border-radius: 12px; 
+                  padding: 24px; 
+                  box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                  max-width: 860px;
+                  margin: 0 auto;
+                }
+                .video-title { 
+                  margin-bottom: 16px; 
+                  color: #333; 
+                  font-size: 24px;
+                  font-weight: 600;
+                }
+                .video-meta {
+                  display: flex;
+                  gap: 16px;
+                  margin-bottom: 16px;
+                  font-size: 14px;
+                  color: #666;
+                }
+                .video-meta span {
+                  background: #f3f4f6;
+                  padding: 4px 8px;
+                  border-radius: 6px;
+                }
+                iframe { 
+                  border-radius: 8px; 
+                  width: 100%;
+                  height: 480px;
+                }
+                .description {
+                  margin-top: 16px;
+                  color: #666;
+                  line-height: 1.6;
+                }
               </style>
             </head>
             <body>
               <div class="video-container">
-                <h2 class="video-title">${video.title}</h2>
+                <h1 class="video-title">${video.title}</h1>
+                <div class="video-meta">
+                  <span>Category: ${video.category}</span>
+                  <span>Duration: ${video.duration}</span>
+                  <span>Views: ${video.views + 1}</span>
+                </div>
                 <iframe 
-                  width="760" 
-                  height="428" 
                   src="${embedUrl}" 
                   frameborder="0" 
                   allowfullscreen>
                 </iframe>
-                <p style="margin-top: 15px; color: #666;">${video.description}</p>
+                <p class="description">${video.description}</p>
               </div>
             </body>
           </html>
@@ -267,30 +303,7 @@ const DoctorLearning = () => {
         popup.document.close();
       }
     } else {
-      // Fallback to opening original URL
       window.open(video.video_url, '_blank');
-    }
-  };
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
     }
   };
 
@@ -304,20 +317,19 @@ const DoctorLearning = () => {
 
   return (
     <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       className="space-y-8"
     >
-      <motion.div variants={itemVariants} className="text-center">
+      <div className="text-center">
         <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
           Learning Hub Management
         </h1>
         <p className="text-gray-600 mt-2">Upload and manage training videos for medical staff</p>
-      </motion.div>
+      </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        <motion.div variants={itemVariants} className="lg:col-span-1">
+        <div className="lg:col-span-1">
           <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -404,9 +416,9 @@ const DoctorLearning = () => {
               </form>
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
 
-        <motion.div variants={itemVariants} className="lg:col-span-2">
+        <div className="lg:col-span-2">
           <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -506,7 +518,7 @@ const DoctorLearning = () => {
               )}
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
     </motion.div>
   );

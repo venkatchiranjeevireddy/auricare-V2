@@ -34,7 +34,6 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-// ----------- AppRoutes Component -------------
 function AppRoutes() {
   const { user, userRole, loading } = useRoleAuth();
 
@@ -104,7 +103,6 @@ function AppRoutes() {
   );
 }
 
-// ----------- Main App Component -------------
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
