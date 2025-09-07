@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Plus, User } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Calendar, Clock, Plus, User, Badge } from 'lucide-react';
 import { useRoleAuth } from '@/hooks/useRoleAuth';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +19,7 @@ interface Appointment {
   notes: string;
   status: string;
   created_at: string;
+  doctor_name?: string;
 }
 
 const UserAppointments = () => {
@@ -33,32 +33,18 @@ const UserAppointments = () => {
     doctorId: ''
   });
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [doctors, setDoctors] = useState<any[]>([]);
+  const [doctors] = useState([
+    { id: 'doc1', doctor_id: 'DOC001', name: 'Dr. Sarah Johnson', specialization: 'Cardiology' },
+    { id: 'doc2', doctor_id: 'DOC002', name: 'Dr. Michael Chen', specialization: 'Neurology' },
+    { id: 'doc3', doctor_id: 'DOC003', name: 'Dr. Emily Rodriguez', specialization: 'Pediatrics' }
+  ]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchAppointments();
-    fetchDoctors();
-  }, [user]);
-
-  const fetchDoctors = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('doctors')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setDoctors(data || []);
-    } catch (error) {
-      console.error('Error fetching doctors:', error);
-      setDoctors([
-        { id: 'doc1', doctor_id: 'DOC001', name: 'Dr. Sarah Johnson', specialization: 'Cardiology' },
-        { id: 'doc2', doctor_id: 'DOC002', name: 'Dr. Michael Chen', specialization: 'Neurology' },
-        { id: 'doc3', doctor_id: 'DOC003', name: 'Dr. Emily Rodriguez', specialization: 'Pediatrics' }
-      ]);
+    if (user) {
+      fetchAppointments();
     }
-  };
+  }, [user]);
 
   const fetchAppointments = async () => {
     if (!user) return;
@@ -83,21 +69,18 @@ const UserAppointments = () => {
         appointment_date: apt.appointment_date,
         notes: apt.notes || 'No details provided',
         status: apt.status || 'pending',
-        created_at: apt.created_at
+        created_at: apt.created_at,
+        doctor_name: apt.notes?.includes('Doctor: ') 
+          ? apt.notes.split('Doctor: ')[1]?.split('\n')[0] 
+          : 'Healthcare Provider'
       }));
       
       setAppointments(transformedData);
     } catch (error) {
       console.error('Error fetching appointments:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load appointments',
-        variant: 'destructive',
-      });
     }
   };
 
-  // ✅ Fix: Format date-time safely for Postgres
   const formatDateTime = (date: string, time: string) => {
     try {
       const combined = new Date(`${date}T${time}:00`);
@@ -122,7 +105,6 @@ const UserAppointments = () => {
 
       const appointmentDateTime = formatDateTime(formData.appointmentDate, formData.appointmentTime);
       
-      // Create appointment record
       const { data: appointmentData, error: appointmentError } = await supabase
         .from('appointments')
         .insert([{
@@ -140,37 +122,18 @@ Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
         .single();
 
       if (appointmentError) {
-        console.error('Appointment creation error:', appointmentError);
         throw new Error(`Failed to create appointment: ${appointmentError.message}`);
       }
 
       // Create or update patient record
-      const { data: patientData, error: patientError } = await supabase
+      await supabase
         .from('patients')
-        .insert([{
+        .upsert({
           user_id: user.id,
           patient_name: formData.patientName,
           username: formData.username,
           medical_history: formData.details
-        }])
-        .select()
-        .single();
-
-      if (patientError) {
-        // Try to update existing patient record
-        const { error: updateError } = await supabase
-          .from('patients')
-          .update({
-            patient_name: formData.patientName,
-            username: formData.username,
-            medical_history: formData.details
-          })
-          .eq('user_id', user.id);
-        
-        if (updateError) {
-          console.error('Error updating patient record:', updateError);
-        }
-      }
+        });
 
       toast({
         title: 'Appointment Booked!',
@@ -188,7 +151,7 @@ Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
       
       fetchAppointments();
 
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message || 'Failed to book appointment',
@@ -220,9 +183,8 @@ Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="max-w-4xl mx-auto space-y-8"
+      className="max-w-6xl mx-auto space-y-8"
     >
-      {/* Booking Form */}
       <div className="text-center">
         <h1 className="text-3xl font-heading font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Book Appointment
@@ -231,7 +193,6 @@ Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
       </div>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        {/* Left side: form */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -335,7 +296,6 @@ Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
           </CardContent>
         </Card>
 
-        {/* Right side: appointments list */}
         <Card className="bg-white/70 backdrop-blur-sm border-0 shadow-xl">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -363,12 +323,12 @@ Doctor: ${selectedDoctor.name} (${selectedDoctor.specialization})`
                     className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200"
                   >
                     <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold text-blue-800">Healthcare Appointment</h4>
+                      <h4 className="font-semibold text-blue-800">{appointment.doctor_name}</h4>
                       <Badge className={getStatusColor(appointment.status)}>
                         {appointment.status}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-700 mb-3">{appointment.notes}</p>
+                    <p className="text-sm text-gray-700 mb-3">Patient: {appointment.patient_name}</p>
                     <div className="flex items-center gap-4 text-xs text-gray-600">
                       <div className="flex items-center gap-1">
                         <Calendar className="size-3" />
